@@ -4,17 +4,19 @@ import { eq } from "drizzle-orm";
 import puppeteer from "puppeteer-core";
 import { listingImports } from "../drizzle/schema";
 import { COOKIE_NAME } from "../shared/const";
-import { createListingImport, getDb, getUserByOpenId, upsertUser } from "../server/db";
-import { sdk } from "../server/_core/sdk";
+import { createListingImport, getDb, getUserByEmail, createUser } from "../server/db";
+import { createSessionToken, generateOpenId, hashPassword } from "../server/auth";
 
 const require = createRequire(import.meta.url);
 const axeSource = await fs.readFile(require.resolve("axe-core/axe.min.js"), "utf8");
 const baseUrl = process.env.A11Y_BASE_URL || "http://127.0.0.1:3000";
-const openId = process.env.OWNER_OPEN_ID;
-if (!openId) throw new Error("OWNER_OPEN_ID is required for the authenticated audit.");
+const auditEmail = process.env.A11Y_AUDIT_EMAIL || "accessibility-audit@example.invalid";
 
-await upsertUser({ openId, name: "Accessibility audit", loginMethod: "audit", lastSignedIn: new Date() });
-const user = await getUserByOpenId(openId);
+let user = await getUserByEmail(auditEmail);
+if (!user) {
+  const passwordHash = await hashPassword(crypto.randomUUID());
+  user = await createUser({ openId: generateOpenId(), email: auditEmail, passwordHash, name: "Accessibility audit" });
+}
 if (!user) throw new Error("Unable to create the authenticated audit user.");
 
 const fixture = await createListingImport(user.id, {
@@ -38,7 +40,7 @@ const fixture = await createListingImport(user.id, {
 });
 if (!fixture) throw new Error("Unable to create the review audit fixture.");
 
-const token = await sdk.createSessionToken(openId, { name: "Accessibility audit", expiresInMs: 10 * 60 * 1000 });
+const token = await createSessionToken({ userId: user.id, openId: user.openId }, 10 * 60 * 1000);
 const routes = ["/", `/review/${fixture.id}`, "/connection", "/history"];
 const report: {
   generatedAt: string;

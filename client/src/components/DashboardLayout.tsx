@@ -1,6 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,8 +21,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
-import { FilePlus2, History, LogOut, PlugZap, ShieldCheck } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { TRPCClientError } from "@trpc/client";
+import { FilePlus2, History, Loader2, LogOut, PlugZap, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
@@ -67,9 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="mt-4 text-[15px] leading-7 text-[#66717d]">
                 Sign in to import sold eBay listings, refine every detail, and create native Seller Hub drafts.
               </p>
-              <Button onClick={() => startLogin()} size="lg" className="mt-9 h-12 w-full rounded-xl bg-[#3156d8] shadow-[0_10px_25px_rgba(49,86,216,.25)] hover:bg-[#294cc4]">
-                Sign in securely
-              </Button>
+              <SignInForm />
               <p className="mt-5 text-center text-xs text-[#66727d]">Your eBay account is connected separately after sign-in.</p>
             </div>
           </div>
@@ -82,6 +84,86 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <SidebarProvider defaultOpen>
       <WorkspaceShell>{children}</WorkspaceShell>
     </SidebarProvider>
+  );
+}
+
+function SignInForm() {
+  const utils = trpc.useUtils();
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const afterSuccess = (user: unknown) => {
+    utils.auth.me.setData(undefined, user as never);
+  };
+
+  const login = trpc.auth.login.useMutation({
+    onSuccess: afterSuccess,
+    onError: err => setError(err instanceof TRPCClientError ? err.message : "Something went wrong. Try again."),
+  });
+  const register = trpc.auth.register.useMutation({
+    onSuccess: afterSuccess,
+    onError: err => setError(err instanceof TRPCClientError ? err.message : "Something went wrong. Try again."),
+  });
+
+  const pending = login.isPending || register.isPending;
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    if (mode === "login") {
+      login.mutate({ email, password });
+    } else {
+      register.mutate({ email, password });
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="mt-9 space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="auth-email">Email</Label>
+        <Input
+          id="auth-email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={event => setEmail(event.target.value)}
+          className="h-11 rounded-xl"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="auth-password">Password</Label>
+        <Input
+          id="auth-password"
+          type="password"
+          autoComplete={mode === "login" ? "current-password" : "new-password"}
+          required
+          minLength={mode === "register" ? 8 : undefined}
+          value={password}
+          onChange={event => setPassword(event.target.value)}
+          className="h-11 rounded-xl"
+        />
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm text-[#b5453b]">{error}</p>
+      ) : null}
+      <Button type="submit" disabled={pending} size="lg" className="h-12 w-full rounded-xl bg-[#3156d8] shadow-[0_10px_25px_rgba(49,86,216,.25)] hover:bg-[#294cc4]">
+        {pending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+        {mode === "login" ? "Sign in" : "Create account"}
+      </Button>
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setMode(mode === "login" ? "register" : "login");
+        }}
+        className="w-full text-center text-xs font-medium text-[#4564e6] hover:underline"
+      >
+        {mode === "login" ? "Need an account? Create one" : "Already have an account? Sign in"}
+      </button>
+    </form>
   );
 }
 

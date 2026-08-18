@@ -50,6 +50,13 @@
       "when": 1785433059703,
       "tag": "0006_sudden_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1787087540021,
+      "tag": "0007_white_patriot",
+      "breakpoints": true
     }
   ]
 }
