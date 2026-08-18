@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  ebayConnection EbayConnection?
+  sourceListings SourceListing[]
+  drafts         Draft[]
+}
+
+enum EbayEnvironment {
+  SANDBOX
+  PRODUCTION
+}
+
+// One eBay OAuth connection per Sell Similar Studio user. Tokens are stored
+// encrypted at rest (see lib/crypto.ts) and are never exposed to the client.
+model EbayConnection {
+  id                    String          @id @default(cuid())
+  userId                String          @unique
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  environment           EbayEnvironment
+  ebayUserId            String?
+  accessTokenCiphertext String
+  refreshTokenCiphertext String
+  accessTokenExpiresAt  DateTime
+  scopes                String
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+// The sold eBay listing a draft was seeded from. Kept distinct from Draft so
+// provenance (source URL, import time, raw metadata) survives edits.
+model SourceListing {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceUrl      String
+  ebayItemId     String
+  title          String?
+  price          String?
+  currency       String?
+  importedAt     DateTime @default(now())
+  importStatus   String
+  importWarnings Json?
+  rawMetadata    Json?
+
+  images SourceImage[]
+  drafts Draft[]
+
+  @@index([userId])
+}
+
+model SourceImage {
+  id              String        @id @default(cuid())
+  sourceListingId String
+  sourceListing   SourceListing @relation(fields: [sourceListingId], references: [id], onDelete: Cascade)
+  sourceImageUrl  String
+  position        Int
+  createdAt       DateTime      @default(now())
+
+  draftImages DraftImage[]
+
+  @@index([sourceListingId])
+}
+
+enum DraftStatus {
+  NOT_SAVED
+  SAVING
+  SAVED
+  SAVED_LOCALLY_ONLY
+  NEEDS_INPUT
+  AUTH_REQUIRED
+  SAVE_FAILED
+}
+
+model Draft {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceListingId String?
+  sourceListing   SourceListing? @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
+
+  sku                  String  @unique
+  title                String
+  description          String
+  price                String
+  currency             String  @default("USD")
+  categoryId           String?
+  conditionId          String?
+  quantity             Int     @default(1)
+  marketplaceId        String  @default("EBAY_US")
+  merchantLocationKey  String?
+  fulfillmentPolicyId  String?
+  paymentPolicyId      String?
+  returnPolicyId       String?
+  itemSpecifics        Json?
+
+  status          DraftStatus @default(NOT_SAVED)
+  idempotencyKey  String      @unique
+  missingRequirements Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images      DraftImage[]
+  submissions EbaySubmission[]
+
+  @@index([userId])
+}
+
+enum DraftImageStatus {
+  PENDING
+  UPLOADING
+  UPLOADED
+  FAILED
+}
+
+model DraftImage {
+  id            String            @id @default(cuid())
+  draftId       String
+  draft         Draft             @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  sourceImageId String?
+  sourceImage   SourceImage?      @relation(fields: [sourceImageId], references: [id], onDelete: SetNull)
+
+  // The URL as originally sourced (source listing) or the local upload URL.
+  originUrl String
+  // The final eBay-hosted (or otherwise eBay-accepted HTTPS) URL used in the payload.
+  hostedUrl String?
+
+  position     Int
+  isPrimary    Boolean           @default(false)
+  ownsRights   Boolean           @default(false)
+  status       DraftImageStatus  @default(PENDING)
+  ebayMediaId  String?
+  error        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([draftId])
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+// One row per attempt to save a Draft to eBay. Idempotency key is shared with
+// the Draft so retries reuse/update the same eBay objects instead of creating
+// duplicates.
+model EbaySubmission {
+  id             String            @id @default(cuid())
+  draftId        String
+  draft          Draft             @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  attemptNumber  Int
+  idempotencyKey String
+
+  inventoryItemSku String?
+  offerId          String?
+  status           SubmissionStatus @default(PENDING)
+
+  requestSummary  Json?
+  responseSummary Json?
+  errors          Json?
+  verifiedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([draftId])
+  @@unique([draftId, attemptNumber])
+}
