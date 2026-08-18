@@ -1,0 +1,1 @@
+ALTER TABLE `ebay_connections` MODIFY COLUMN `ebayUserId` text;

@@ -1,0 +1,975 @@
+{
+  "generatedAt": "2026-07-16T18:05:08.722Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "routes": [
+    {
+      "route": "/",
+      "axe": {
+        "violations": [],
+        "passes": 18,
+        "incomplete": [
+          "color-contrast"
+        ]
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "eBay sold listing URL",
+          "visibleIndicator": true
+        }
+      ],
+      "semantics": {
+        "labeledControls": 7,
+        "controls": 7,
+        "liveRegions": [
+          {
+            "role": null,
+            "ariaLive": "polite"
+          }
+        ],
+        "reducedMotionMatched": true,
+        "animatedElementCount": 0
+      }
+    },
+    {
+      "route": "/review/90001",
+      "axe": {
+        "violations": [],
+        "passes": 21,
+        "incomplete": []
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Save review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Create eBay draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Title",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Price",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Quantity",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Condition ID",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Category ID",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Condition name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Category name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "textarea",
+          "label": "Description",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Deselect imported listing photo 1",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 1 name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 1 value",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Remove Brand",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 2 name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 2 value",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Remove Type",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Add item specific",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "View",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Save review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Create eBay draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Title",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Price",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Quantity",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Condition ID",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Category ID",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Condition name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Category name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "textarea",
+          "label": "Description",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Deselect imported listing photo 1",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 1 name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 1 value",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Remove Brand",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 2 name",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "input",
+          "label": "Item specific 2 value",
+          "visibleIndicator": true
+        }
+      ],
+      "semantics": {
+        "labeledControls": 24,
+        "controls": 24,
+        "liveRegions": [
+          {
+            "role": null,
+            "ariaLive": "polite"
+          }
+        ],
+        "reducedMotionMatched": true,
+        "animatedElementCount": 0
+      }
+    },
+    {
+      "route": "/connection",
+      "axe": {
+        "violations": [],
+        "passes": 18,
+        "incomplete": []
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Copy",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "a",
+          "label": "How eBay inventory drafts work",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        }
+      ],
+      "semantics": {
+        "labeledControls": 8,
+        "controls": 8,
+        "liveRegions": [
+          {
+            "role": null,
+            "ariaLive": "polite"
+          }
+        ],
+        "reducedMotionMatched": true,
+        "animatedElementCount": 0
+      }
+    },
+    {
+      "route": "/history",
+      "axe": {
+        "violations": [],
+        "passes": 17,
+        "incomplete": []
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Draft history",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "eBay connection",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "AAccessibility auditeBay US workspace",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Toggle Sidebar",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "Continue review",
+          "visibleIndicator": true
+        },
+        {
+          "tag": "button",
+          "label": "New draft",
+          "visibleIndicator": true
+        }
+      ],
+      "semantics": {
+        "labeledControls": 7,
+        "controls": 7,
+        "liveRegions": [
+          {
+            "role": null,
+            "ariaLive": "polite"
+          }
+        ],
+        "reducedMotionMatched": true,
+        "animatedElementCount": 0
+      }
+    }
+  ],
+  "errorAnnouncement": {
+    "present": true,
+    "text": "Enter a complete eBay listing URL."
+  }
+}

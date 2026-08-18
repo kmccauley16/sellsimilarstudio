@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-07-16T17:53:03.116Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "routes": [
+    {
+      "route": "/",
+      "axe": {
+        "violations": [],
+        "passes": 13,
+        "incomplete": [
+          "color-contrast"
+        ]
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "Sign in securely",
+          "visibleIndicator": true
+        }
+      ],
+      "reducedMotion": {
+        "preferenceMatched": true,
+        "animatedElementCount": 0
+      }
+    },
+    {
+      "route": "/connection",
+      "axe": {
+        "violations": [],
+        "passes": 13,
+        "incomplete": [
+          "color-contrast"
+        ]
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "Sign in securely",
+          "visibleIndicator": true
+        }
+      ],
+      "reducedMotion": {
+        "preferenceMatched": true,
+        "animatedElementCount": 0
+      }
+    },
+    {
+      "route": "/history",
+      "axe": {
+        "violations": [],
+        "passes": 13,
+        "incomplete": [
+          "color-contrast"
+        ]
+      },
+      "focusSequence": [
+        {
+          "tag": "button",
+          "label": "Sign in securely",
+          "visibleIndicator": true
+        }
+      ],
+      "reducedMotion": {
+        "preferenceMatched": true,
+        "animatedElementCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+# Project TODO
+
+- [x] Verify current eBay OAuth scopes, listing retrieval options, draft creation semantics, and API policy constraints.
+- [x] Define the listing, image, item-specific, eBay connection, and history database models.
+- [x] Add secure database helpers and authenticated backend procedures.
+- [x] Validate and normalize supported eBay US sold-listing URLs.
+- [x] Implement backend listing extraction for title, description, item specifics, condition, price, and image URLs.
+- [x] Add extraction timeout, content-size, SSRF, HTML sanitization, and structured error safeguards.
+- [x] Build an elegant responsive URL-import experience with clear loading and error feedback.
+- [x] Build the editable review workspace for title, description, item specifics, condition, and price.
+- [x] Build the imported image gallery with per-image selection and deselection.
+- [x] Implement eBay US OAuth connect, callback, token storage, expiry, refresh, and disconnect flows.
+- [x] Implement eBay US draft creation as an unpublished Inventory API offer.
+- [x] Record listing history with exact statuses “draft created” and “failed”.
+- [x] Add direct eBay links for successfully created drafts where the official API provides a stable destination.
+- [x] Add unit tests covering URL validation, extraction parsing, sanitization, API mapping, status wording, and error handling.
+- [x] Verify TypeScript, production build, and Vitest suite.
+- [x] Verify desktop and mobile layouts, accessibility, and visual polish in the live preview.
+- [x] Document required eBay developer credentials, RuName/redirect configuration, scopes, and production setup.
+
+- [x] Replace all eBay UK assumptions with eBay US marketplace settings (`EBAY_US`, `USD`, and `en-US`).
+- [x] Ensure the primary submission action creates only an unpublished Inventory API offer and never publishes a live listing.
+- [x] Label the product flow clearly as draft-first and require a separate action outside the initial import workflow before any future publication capability.
+
+- [x] Add a public HTTPS Marketplace Account Deletion challenge-response endpoint using eBay’s required hash verification.
+- [x] Validate and acknowledge Marketplace Account Deletion notifications without trusting unverified payload instructions.
+- [x] Delete the matching eBay connection, encrypted tokens, imported listings, and draft history when a verified account-closure notification is received.
+- [x] Add replay-safe/idempotent deletion handling, privacy-preserving logs, and Vitest coverage for challenge and cleanup flows.
+- [x] Document the production notification endpoint URL and verification-token setup required in the eBay developer console.
+
+- [x] Add a public HTTPS Marketplace Account Deletion challenge-response endpoint using eBay’s required hash verification.
+- [x] Validate and acknowledge Marketplace Account Deletion notifications without trusting unverified payload instructions.
+- [x] Delete the matching eBay connection, encrypted tokens, imported listings, and draft history when a verified account-closure notification is received.
+- [x] Add replay-safe/idempotent deletion handling, privacy-preserving logs, and Vitest coverage for challenge and cleanup flows.
+- [x] Document the production notification endpoint URL and verification-token setup required in the eBay developer console.
+- [x] Store eBay’s immutable `userId` before the public username so account-deletion notifications match the correct connection.
+- [x] Fail eBay authorization safely if the immutable seller `userId` cannot be retrieved, rather than storing an unmatchable connection.
+- [x] Label created-offer links accurately as a filtered Seller Hub drafts view rather than a guaranteed draft-specific deep link.
+- [x] Preserve the eBay offer ID in history so the created draft remains directly identifiable even when eBay provides no stable offer-specific Seller Hub URL.
+- [x] Fix the authenticated desktop shell so the main content canvas is a flex sibling of the fixed sidebar and no headings or forms are clipped beneath navigation.
+- [x] Show the browser-facing HTTPS origin for the eBay compliance endpoint instead of an internal loopback host in preview and production setup instructions.
+- [x] Verify keyboard navigation, visible focus states, form labels, semantic announcements, color contrast, and reduced-motion behavior on the primary screens.
+
+- [x] Add persistent user-entered keyword phrases to each listing review.
+- [x] Add a review-workspace keyword panel with add, remove, duplicate prevention, and clear guidance about visible eBay listing fields.
+- [x] Analyze each keyword’s presence in the title, item specifics, and description without representing it as a hidden eBay keyword field.
+- [x] Add one-click, user-controlled insertion of a selected keyword into the title, description, or an item-specific value.
+- [x] Add tests for normalization, duplicate prevention, field matching, safe insertion, and title-length handling.
+- [x] Verify the updated keyword workflow visually, responsively, and accessibly before publishing the change.
+- [x] Diagnose the reported tracked listing URL pattern and implement a safe recovery path that directs the owner to Production API activation when eBay blocks public retrieval.
+- [x] Verify and clearly expose the eBay Marketplace Account Deletion callback and verification-token setup required to re-enable the Production keyset.
+- [x] Fix the live eBay Marketplace Account Deletion test-notification callback HTTP 500 response and verify a successful eBay retry.
+- [x] Configure the existing eBay Production App ID and Cert ID securely so the callback can verify eBay test notifications.
+- [x] Add an automated regression test for the signed Marketplace Account Deletion POST flow with configured credentials.
+- [x] Verify a representative eBay item can be retrieved through the official Production API after keyset activation.
+- [x] Resolve the `MAX_REVIEW_KEYWORDS` shared-module export mismatch that is causing a runtime import error.
+- [x] Fix the eBay connection screen so configured Production credentials enable account authorization.
+- [x] Configure the eBay OAuth redirect identifier and token-encryption key so the seller authorization flow can start.
+- [x] Provide and verify the public privacy-policy link required for eBay OAuth consent configuration.
+- [x] Fix live SPA routing so the public privacy-policy page can be reached on the stable domain for eBay consent.
+- [x] Publish and verify the public privacy-policy page on the stable live domain for eBay consent.
+- [x] Give the owner the exact public privacy-policy URL to paste into eBay OAuth settings.
+- [x] Send the owner the exact live privacy-policy URL for the eBay OAuth form.
+- [x] Resolve the live app warning that says eBay developer credentials are missing despite validated configured secrets.
+- [x] Verify the live eBay connection page enables seller authorization after credential synchronization.
+- [x] Create a redacted Claude handoff that documents the current Sell Similar Studio architecture, completed eBay integration, messaging feature specification, and secure credential-transfer requirements.
+- [x] Configure and verify eBay OAuth accept and decline URLs so authorization returns to Sell Similar Studio with the code and state parameters.
+- [x] Confirm that the legacy eBay Test Sign-In return is a developer-console verification path and that the app must use its separate OAuth authorization flow.
+- [x] Complete and verify the actual Sell Similar Studio OAuth authorization flow after the developer-console redirect test.
+- [x] Diagnose and fix the live eBay OAuth callback 404, then verify the seller connection persists successfully.
+- [x] Add and verify the Commerce Identity read scope required to retrieve the authenticated seller’s immutable eBay user ID.
+- [x] Verify the accepted eBay OAuth return reaches `/connection` with modern `code` and `state` parameters and persists the seller connection.
+- [x] Verify the declined eBay OAuth return reaches `/connection` safely without persisting a seller connection.
+- [x] Diagnose and repair the `ebay_connections` insert failure encountered after successful eBay authorization.
+- [x] Prevent OAuth callback or database errors from exposing access tokens, refresh tokens, or SQL parameters in the browser.
+- [x] Add regression coverage for safe OAuth connection-persistence failure handling and client-visible error redaction.
+- [x] Capture or reproduce the original post-auth database error and verify a successful seller-connection row persists after the schema repair.
+- [x] Add a router-level test that simulates a sensitive database failure in `ebay.completeAuthorization` and asserts the client-visible message is redacted.
+- [x] Diagnose the repeated immediate eBay OAuth return that still fails after the opaque seller-ID storage migration, using redacted live diagnostics.
+- [x] Verify the eBay seller connection persists after the next controlled authorization retry.
+- [x] Add redacted stage-level logging to the OAuth completion path so any remaining live failure identifies its safe processing stage and error code without retaining token or SQL text.
+- [x] Diagnose eBay’s `temporarily_unavailable` HTTP 500 response at the authorization endpoint, including the generated authorization URL’s environment, RuName, scopes, and app-key consistency.
+- [x] Confirm the eBay developer-console OAuth configuration has a production enabled keyset and matching RuName/consent settings before another seller retry.
+- [x] Add an explicit eBay OAuth login prompt and US locale to make the consent redirect deterministic instead of relying on a cached eBay session.
+- [x] Validate the deployed Production OAuth configuration against the eBay Developer Console’s keyset, RuName, accept URL, and consent settings without changing application code.
+- [x] Perform exactly one controlled seller authorization after configuration validation, then use only redacted callback-stage evidence to classify the result.
+- [x] Avoid speculative OAuth changes unless the controlled attempt identifies a specific application defect.
+- [x] Inspect the redacted callback-stage record from the completed eBay sign-in and identify the specific remaining server-side failure.
+- [x] Apply only the correction directly supported by that callback-stage evidence, then verify a persisted `ebay_connections` record after one retry.
+- [x] Handle an authorization-code token response that omits `scope` by persisting the requested eBay scopes instead of failing after token encryption.
+- [x] Add regression coverage for a successful authorization-code response without a `scope` field.
+- [x] Record the non-secret Production eBay OAuth configuration in a verifiable artifact, including keyset active state, RuName, accept/decline URL prefix, and OAuth-enabled status, based on direct textual capture rather than screenshot interpretation.
+- [x] Add a reproducible redacted verification note that explicitly matches the deployed authorization request configuration to the verified Developer Console RuName and accept URL.
+- [x] Diagnose the live eBay OAuth return that includes `state` but omits `code`, without exposing query data or credentials.
+- [x] Confirm whether the missing-code return represents an eBay consent outcome, redirect-configuration behavior, or client-side navigation loss before changing application code.
+- [x] Compare the exact deployed OAuth request parameters and redirect URI fingerprint with the active Production User Tokens configuration after confirming eBay bypasses the consent page.
+- [x] Determine why eBay redirects to the configured Accept URL after sign-in without emitting either consent UI or an authorization code.
+- [x] Stop treating the eBay Developer Program configuration as the active blocker because the Production RuName shows a persisted green OAuth-enabled state.
+- [x] Inspect the app’s OAuth navigation and callback parsing for any client-side path that can lose `code` while retaining `state`.
+- [x] Diagnose the unexpected DE-Berlin and US-Washington inventory locations returned after the successful Production eBay seller connection, without saving seller setup or creating a draft.
+- [x] Verify whether the unexpected inventory locations originate in the eBay Account API response or the app’s location mapping, then correct the supported source of truth.
+- [x] Superseded for the active native Seller Hub Feed workflow: document that it is location-independent; retain explicit Chicago selection and save safeguards only for any future legacy Inventory API offer workflow.
+- [x] Add a protected, non-destructive Chicago, Illinois warehouse-location setup path using only the seller-confirmed city, state, and country.
+- [x] Require an explicit confirmation before the app creates the new eBay inventory location, leaving existing eBay locations unchanged.
+- [x] Add regression coverage for Chicago location creation, duplicate detection, and safe selection before saving seller policies.
+- [x] Superseded for the active native Seller Hub Feed workflow: retain no-publish coverage and document that an explicitly saved Chicago warehouse applies only to any future legacy Inventory API offer workflow.
+- [x] Add a router-level regression test proving warehouse creation/reuse does not persist `merchantLocationKey` until the user explicitly saves seller setup.
+- [x] Add client-level and end-to-end router coverage for create/reuse → local selection → explicit seller-setup save of the Chicago warehouse.
+- [x] Add a Connection-page component regression test showing Chicago selection updates the actual form locally before save.
+- [x] Prepare a secure, portable Claude handoff that summarizes the Sell Similar Studio implementation, verified eBay setup, open workflow items, and the requested automated messaging concept without including credentials, tokens, full addresses, or user-provided screenshots.
+- [x] Diagnose the redacted eBay “This Offer is not available” rejection encountered when creating an unpublished draft from a fully ready review.
+- [x] Apply only the evidence-supported eBay offer-creation repair and verify the result remains unpublished.
+- [x] Add a server-side AI description proposal triggered by the user’s edited title, preserving the original description until the user explicitly applies the proposal.
+- [x] Add UI and server regression coverage for the AI proposal, user-controlled apply behavior, redacted errors, and unpublished draft creation.
+- [x] Keep the AI description proposal user-triggered, bounded to one short response, and free of background generation or automatic retry loops to minimize project credit usage.
+- [x] Add a router regression test proving unexpected AI description proposal failures return a safe generic message without provider or internal details.
+- [x] Add a Review-page regression test proving a failed AI proposal leaves the description unchanged and displays only the safe error message.
+- [x] Investigate and correct the false-success “Draft created” status when the recorded offer is not visible in the seller’s eBay Seller Hub drafts list, without creating duplicate offers.
+- [x] Evaluate and recommend a supported workflow that turns a pasted sold eBay listing link into a native Seller Hub draft without publishing, clearly distinguishing app-managed unpublished offers from Seller Hub drafts.
+- [x] Replace the Inventory API offer submission path with the eBay Sell Feed API `FX_LISTING` native Seller Hub draft workflow using the documented `Draft` action.
+- [x] Add explicit draft-feed task states, safe result tracking, and no-publish safeguards so the app never claims a native draft exists before eBay confirms processing.
+- [x] Update review, history, connection, and status copy to distinguish true Seller Hub drafts from legacy unpublished Inventory API offers.
+- [x] Validate the official Seller Hub “Create new Drafts” template mapping, including category fields, policies, image limits, and row-level errors before enabling a live submission.
+- [x] Add migration and deterministic regression tests for native-draft feed creation, task-state handling, safe errors, and no-publish behavior.
+- [x] Audit the concrete native Feed API submission, task-state, no-publish, CSV-mapping, and regression-test evidence before publishing the workflow change.
+- [ ] With the seller’s explicit confirmation, submit one reviewed listing through the native Feed API and verify eBay reports successful creation of a Seller Hub draft without publishing it.
+- [x] Verify the native Seller Hub draft workflow against official eBay developer, seller, automation, listing, and content policies before any real draft submission, and document the required compliance safeguards.
+
+- [x] Assess whether AI background changes to source listing photos alter eBay content-rights compliance, and document a safe seller-owned photo workflow.
+- [x] Replace automatic reuse of source-listing photos with seller-controlled, rights-attested uploads or permitted eBay catalog content before native-draft submission.
+- [x] Offer white-background AI enhancement only for photos the seller confirms they own or are authorized to use, preserving the actual product without inventing or materially altering its condition.
+- [x] Replace direct public-page source import with an official-API-only research path or a safe manual source reference, and prohibit automatic copying of source descriptions or photos.
+- [x] Require seller attestation that each uploaded photo is owned or authorized and that the listing accurately represents the seller’s actual item before native-draft submission.
+- [x] Add an optional white-background enhancement path only for rights-attested seller uploads, preserving product identity, condition, color, marks, and flaws.
+- [x] Add deterministic policy-safety tests and visible user guidance for source content, image rights, attestation, and safe native-draft eligibility.
+- [x] Verify whether eBay’s native Seller Hub Feed API permits a photo-pending `Draft` row, then support the fastest compliant computer-to-phone handoff without reusing imported source photos.
+- [x] Update the review workspace and draft eligibility messaging so sellers can finish their own photos from a phone when eBay accepts a photo-pending native draft.
+- [x] Add regression coverage for the selected computer-to-phone photo-pending draft behavior and its eBay submission guardrails.
+- [ ] Submit exactly one seller-approved, fully reviewed listing through the native Feed API, verify eBay reports a Seller Hub draft, and confirm no publish action occurs.
+- [x] Fix the item-accuracy attestation persistence path so a seller-confirmed photo-pending draft can be saved and submitted safely.
+- [x] Diagnose and repair the failing AI description proposal action, including safe client-visible error handling.
+- [x] Diagnose and correct the incorrect disabled state of the photo-pending draft action while retaining the required seller item-accuracy confirmation.
+- [ ] Diagnose and correct the live-production version mismatch so the validated AI proposal and save-first draft controls are served on the stable domain.
+- [ ] Diagnose the live description-proposal failure and repair GPT response generation with the appropriate completion-token parameter.
+- [ ] Complete one focused production verification of the AI description repair before reporting completion, without submitting any listing.
+- [ ] Remove the item-accuracy confirmation requirement from photo-pending Seller Hub draft readiness.
+- [ ] Inspect the recorded Seller Hub feed failure for listing 180001 and apply only an evidence-supported correction without retrying the draft.
+- [ ] Complete only one deployment confirmation and one read-only live task-status check before reporting the final outcome.
+- [ ] If approved, add a clearer seller-owned or authorized photo queue with upload and removal controls while preserving imported source photos as reference-only.
+- [x] Confirm that prior sold-listing photos remain visible only as reference images for comparison and are not included in Seller Hub draft uploads.
+- [ ] Create an updated redacted Claude migration handoff and a source-code archive that exclude all credentials, tokens, database data, user-uploaded files, and screenshots.

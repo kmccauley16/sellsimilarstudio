@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1784120345305,
+      "tag": "0000_pink_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1784120933149,
+      "tag": "0001_fair_princess_powerful",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1784121466174,
+      "tag": "0002_strong_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1784600925224,
+      "tag": "0003_ambitious_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1784736847137,
+      "tag": "0004_tough_boom_boom",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1785429745292,
+      "tag": "0005_living_quasimodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1785433059703,
+      "tag": "0006_sudden_komodo",
+      "breakpoints": true
+    }
+  ]
+}
