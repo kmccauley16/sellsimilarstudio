@@ -12,7 +12,7 @@ import { storageGetSignedUrl, storagePut } from "./storage";
 const MAX_OWNED_PHOTOS = 12;
 const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_UPLOAD_BASE64_LENGTH = Math.ceil((MAX_IMAGE_UPLOAD_BYTES * 4) / 3) + 4;
-const OWNED_PHOTO_PREFIX = "/manus-storage/";
+const OWNED_PHOTO_PREFIX = "/storage/";
 const ALLOWED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png"] as const;
 
 type SupportedImageMimeType = (typeof ALLOWED_UPLOAD_MIME_TYPES)[number];

@@ -282,7 +282,7 @@ describe("native Seller Hub draft task safety", () => {
     userId: 1,
     title: "Test lamp",
     status: "review",
-    ownedImageUrls: JSON.stringify(["/manus-storage/owned/user-1/listing-200/lamp.jpg"]),
+    ownedImageUrls: JSON.stringify(["/storage/owned/user-1/listing-200/lamp.jpg"]),
     photoRightsAttestedAt: new Date(),
     itemAccuracyAttestedAt: new Date(),
   };

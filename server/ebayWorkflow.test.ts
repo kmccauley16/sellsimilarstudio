@@ -171,7 +171,7 @@ describe("US unpublished offer mapping", () => {
     const listing = {
       title: "Vintage 35mm camera",
       description: "Clean, tested camera.",
-      ownedImageUrls: JSON.stringify(["/manus-storage/owned/user-1/listing-2/camera.jpg"]),
+      ownedImageUrls: JSON.stringify(["/storage/owned/user-1/listing-2/camera.jpg"]),
       itemSpecifics: JSON.stringify([{ name: "Brand", value: "Example" }]),
       quantity: 1,
       conditionId: "3000",
@@ -232,8 +232,8 @@ describe("native Seller Hub draft feeds", () => {
     title: "Vintage 35mm camera",
     description: "Clean, tested camera.",
     ownedImageUrls: JSON.stringify([
-      "/manus-storage/owned/user-1/listing-2/camera.jpg",
-      "/manus-storage/owned/user-1/listing-2/camera-two.jpg",
+      "/storage/owned/user-1/listing-2/camera.jpg",
+      "/storage/owned/user-1/listing-2/camera-two.jpg",
     ]),
     // Imported source images are deliberately retained only as non-draft-eligible reference data.
     selectedImageUrls: JSON.stringify(["https://i.ebayimg.com/images/g/source-camera/s-l1600.jpg"]),
@@ -249,7 +249,7 @@ describe("native Seller Hub draft feeds", () => {
 
     expect(csv).toContain("Action,Custom label (SKU),Category ID,Title,Condition ID,Item photo URL,Description,Format,Quantity,Start price,C:Brand,C:Model");
     expect(csv).toContain("Draft,SSS-1-2,15230,Vintage 35mm camera,3000");
-    expect(csv).toContain("https://seller.example/manus-storage/owned/user-1/listing-2/camera.jpg|https://seller.example/manus-storage/owned/user-1/listing-2/camera-two.jpg");
+    expect(csv).toContain("https://seller.example/storage/owned/user-1/listing-2/camera.jpg|https://seller.example/storage/owned/user-1/listing-2/camera-two.jpg");
     expect(csv).not.toContain("i.ebayimg.com");
     expect(csv).toContain("Clean, tested camera.");
     expect(csv).not.toMatch(/publish/i);

@@ -484,7 +484,7 @@ function parseNativeDraftJson<T>(value: string, fallback: T): T {
 function sellerOwnedPhotoUrlsForNativeDraft(value: string, publicOrigin?: string) {
   const relativeUrls = Array.from(new Set(
     parseNativeDraftJson<string[]>(value, [])
-      .filter(url => typeof url === "string" && url.startsWith("/manus-storage/"))
+      .filter(url => typeof url === "string" && url.startsWith("/storage/"))
       .map(url => url.trim()),
   )).slice(0, 12);
 

@@ -88,7 +88,7 @@ function listingHasOwnedPhoto(listing: Awaited<ReturnType<typeof db.getListingIm
   if (!listing) return false;
   try {
     const urls = JSON.parse(listing.ownedImageUrls) as unknown;
-    return Array.isArray(urls) && urls.some(url => typeof url === "string" && url.startsWith("/manus-storage/"));
+    return Array.isArray(urls) && urls.some(url => typeof url === "string" && url.startsWith("/storage/"));
   } catch {
     return false;
   }
