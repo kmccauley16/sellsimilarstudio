@@ -22,6 +22,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 
+const ACCEPTED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"] as const;
+type AcceptedUploadMimeType = (typeof ACCEPTED_UPLOAD_MIME_TYPES)[number];
+function isAcceptedUploadMimeType(value: string): value is AcceptedUploadMimeType {
+  return (ACCEPTED_UPLOAD_MIME_TYPES as readonly string[]).includes(value);
+}
+
 type Specific = { name: string; value: string };
 
 type ReviewForm = {
@@ -309,22 +315,26 @@ export default function Review() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    const mimeType = file.type;
-    if (mimeType !== "image/jpeg" && mimeType !== "image/png") {
-      toast.error("Upload a JPEG or PNG image.");
+    // Some browsers leave `type` blank for less common formats (e.g. HEIC from a phone camera
+    // roll); let those through too and rely on the server's real image decoder to validate.
+    if (file.type && !file.type.startsWith("image/")) {
+      toast.error("Upload a photo file.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Choose an image smaller than 10 MB.");
+      toast.error("Choose a photo smaller than 10 MB.");
       return;
     }
+    // The server normalizes every upload to JPEG regardless of source format, so this only
+    // needs to satisfy the request schema, not describe the file's real type.
+    const mimeType = isAcceptedUploadMimeType(file.type) ? file.type : "image/jpeg";
     const reader = new FileReader();
-    reader.onerror = () => toast.error("That image could not be read. Try another JPEG or PNG file.");
+    reader.onerror = () => toast.error("That photo could not be read. Try another file.");
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
       const base64 = result.includes(",") ? result.slice(result.indexOf(",") + 1) : "";
       if (!base64) {
-        toast.error("That image could not be read. Try another JPEG or PNG file.");
+        toast.error("That photo could not be read. Try another file.");
         return;
       }
       uploadOwnedPhoto.mutate({ id, mimeType, base64 });
@@ -552,13 +562,13 @@ export default function Review() {
                     <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-[#e4eaff] text-[#3156d8]"><ImagePlus className="size-4" /></span>
                     <div>
                       <p className="text-sm font-semibold text-[#26323d]">Add your own photos here.</p>
-                      <p className="mt-1 text-xs leading-5 text-[#5c6875]">You can save a draft now and add photos later, but publishing to eBay requires at least one JPEG or PNG upload.</p>
+                      <p className="mt-1 text-xs leading-5 text-[#5c6875]">You can save a draft now and add photos later, but publishing to eBay requires at least one photo upload.</p>
                     </div>
                   </div>
                   <label className={`inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#cfd8fb] bg-white px-4 text-sm font-medium text-[#3156d8] transition-colors hover:bg-[#eef1ff] ${uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12 ? "pointer-events-none opacity-60" : ""}`}>
                     {uploadOwnedPhoto.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <ImagePlus className="mr-2 size-4" />}
                     {uploadOwnedPhoto.isPending ? "Uploading…" : "Upload photo"}
-                    <input aria-label="Upload your photo" type="file" accept="image/jpeg,image/png" className="sr-only" onChange={handlePhotoUpload} disabled={uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12} />
+                    <input aria-label="Upload your photo" type="file" accept="image/*" className="sr-only" onChange={handlePhotoUpload} disabled={uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12} />
                   </label>
                 </div>
               </div>

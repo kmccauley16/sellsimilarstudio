@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import sharp from "sharp";
 import { z } from "zod";
 import * as db from "./db";
 import { importEbayListing, ListingImportError, sanitizeDescription } from "./ebayListing";
@@ -13,7 +14,10 @@ const MAX_OWNED_PHOTOS = 12;
 const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_UPLOAD_BASE64_LENGTH = Math.ceil((MAX_IMAGE_UPLOAD_BYTES * 4) / 3) + 4;
 const OWNED_PHOTO_PREFIX = "/storage/";
-const ALLOWED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png"] as const;
+// The uploaded source can be any common photo format the browser hands us (including phone
+// screenshots and camera-roll saves); everything is normalized to JPEG below before storage,
+// since that is what eBay's own image requirements guarantee support for.
+const ALLOWED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"] as const;
 
 type SupportedImageMimeType = (typeof ALLOWED_UPLOAD_MIME_TYPES)[number];
 
@@ -78,15 +82,14 @@ function storageKeyForOwnedPhoto(url: string) {
   return key;
 }
 
-function extensionForMimeType(mimeType: SupportedImageMimeType) {
-  return mimeType === "image/png" ? "png" : "jpg";
-}
-
-function mimeTypeForOwnedPhoto(url: string): SupportedImageMimeType {
+function mimeTypeForOwnedPhoto(url: string): "image/jpeg" | "image/png" {
   return /\.png$/i.test(url) ? "image/png" : "image/jpeg";
 }
 
-function decodeImageUpload(base64: string, mimeType: SupportedImageMimeType) {
+// Decodes and re-encodes every upload as a standard JPEG regardless of source format
+// (WebP, HEIC/HEIF from phone camera rolls, GIF, etc.), since sharp's decoder itself is the
+// validation: corrupt or unsupported input throws rather than reaching storage.
+async function decodeImageUpload(base64: string) {
   const normalized = base64.replace(/\s/g, "");
   if (
     !normalized ||
@@ -94,19 +97,19 @@ function decodeImageUpload(base64: string, mimeType: SupportedImageMimeType) {
     normalized.length % 4 !== 0 ||
     !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)
   ) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a valid JPEG or PNG image smaller than 10 MB." });
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a valid photo smaller than 10 MB." });
   }
 
   const buffer = Buffer.from(normalized, "base64");
-  const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  const isPng =
-    buffer.length >= 8 &&
-    buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-  const mimeMatchesBytes = (mimeType === "image/jpeg" && isJpeg) || (mimeType === "image/png" && isPng);
-  if (!buffer.length || buffer.length > MAX_IMAGE_UPLOAD_BYTES || !mimeMatchesBytes) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a valid JPEG or PNG image smaller than 10 MB." });
+  if (!buffer.length || buffer.length > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a valid photo smaller than 10 MB." });
   }
-  return buffer;
+
+  try {
+    return await sharp(buffer, { failOn: "none" }).rotate().jpeg({ quality: 90 }).toBuffer();
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "That file could not be read as a photo. Try another image." });
+  }
 }
 
 async function requireListing(userId: number, id: number) {
@@ -185,11 +188,11 @@ export const listingRouter = router({
       }
 
       try {
-        const bytes = decodeImageUpload(input.base64, input.mimeType);
+        const bytes = await decodeImageUpload(input.base64);
         const { url } = await storagePut(
-          `owned-listing-photos/${ctx.user.id}/${listing.id}/${Date.now()}.${extensionForMimeType(input.mimeType)}`,
+          `owned-listing-photos/${ctx.user.id}/${listing.id}/${Date.now()}.jpg`,
           bytes,
-          input.mimeType,
+          "image/jpeg",
         );
         const updated = await db.updateOwnedImageUrls(ctx.user.id, listing.id, [...currentUrls, url]);
         if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
