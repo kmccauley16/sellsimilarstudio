@@ -171,7 +171,7 @@ describe("Review AI description proposal", () => {
 
     expect(screen.getByText(/No desktop photo is needed\./)).not.toBeNull();
     expect(screen.queryByText(/This listing accurately describes the item I have/i)).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Create photo-pending draft" }));
+    await user.click(screen.getAllByRole("button", { name: "Create photo-pending draft" })[0]);
     expect(mocks.createDraftMutate).toHaveBeenCalledWith({ listingImportId: 42 });
     expect(mocks.attestPhotoRightsMutate).not.toHaveBeenCalled();
   });
@@ -186,7 +186,7 @@ describe("Review AI description proposal", () => {
     const description = screen.getByLabelText("Description");
     await user.type(description, " Revised after inspection.");
 
-    await user.click(screen.getByRole("button", { name: "Save review to continue" }));
+    await user.click(screen.getAllByRole("button", { name: "Save review to continue" })[0]);
     expect(mocks.saveReviewMutate).toHaveBeenCalledWith(expect.objectContaining({
       id: 42,
       description: "<p>Original lamp description.</p> Revised after inspection.",

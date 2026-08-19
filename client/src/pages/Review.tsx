@@ -592,7 +592,7 @@ export default function Review() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-[#d6d2c9] bg-[#faf9f7] p-7 text-center text-sm leading-6 text-[#596674]">No desktop photo is needed. Create a photo-pending Seller Hub draft now, then add your own photos in eBay on your phone before listing it. Source-listing photos below remain reference-only and cannot be submitted with this draft.</div>
+                <div className="mt-5 rounded-2xl border border-dashed border-[#d6d2c9] bg-[#faf9f7] p-7 text-center text-sm leading-6 text-[#596674]">No desktop photo is needed. Create a photo-pending Seller Hub draft now, then add your own photos in eBay on your phone before listing it.</div>
               )}
 
               <div className="mt-5 space-y-3 rounded-2xl border border-[#e7e4dd] bg-[#faf9f7] p-4">
@@ -600,16 +600,6 @@ export default function Review() {
                   <input type="checkbox" className="mt-0.5 size-4 accent-[#3156d8]" checked={photoRightsConfirmed} onChange={event => { if (event.target.checked) attestPhotoRights.mutate({ id }); }} disabled={!ownedPhotoUrls.length || photoRightsConfirmed || attestPhotoRights.isPending} />
                   <span className="text-xs leading-5 text-[#485560]"><span className="font-semibold text-[#26323d]">I own or am authorized to use these photos.</span> This confirmation applies only to the current uploaded photo set.</span>
                 </label>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-[#e7e4dd] bg-white p-4">
-                <p className="text-[10px] font-semibold tracking-[0.12em] text-[#596674] uppercase">Source photos — reference only</p>
-                <p className="mt-2 text-xs leading-5 text-[#5d6975]">These images can help you compare condition and details. They cannot be selected, transformed, or submitted by this app.</p>
-                {listing.data.imageUrls.length ? (
-                  <div className="mt-3 grid grid-cols-4 gap-2">
-                    {listing.data.imageUrls.slice(0, 8).map((url, index) => <img key={url} src={url} alt={`Source listing reference photo ${index + 1}`} className="aspect-square rounded-lg border border-[#e5e2db] object-cover opacity-70" />)}
-                  </div>
-                ) : <p className="mt-3 text-xs text-[#74808b]">No source photos were available for reference.</p>}
               </div>
             </Section>
 
@@ -652,6 +642,37 @@ export default function Review() {
               <div className="mt-4 flex items-center justify-between text-xs text-[#596674]"><span>Item #{listing.data.sourceItemId}</span><a href={listing.data.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#4564e6] hover:underline">View <ExternalLink className="size-3" /></a></div>
             </Card>
           </aside>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 border-t border-[#e7e4dd] pt-6 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={save} disabled={saveReview.isPending} className="h-11 rounded-xl border-[#d8d5ce] bg-white px-5">
+            {saveReview.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} Save review
+          </Button>
+          {listing.data.status === "draft created" && isNativeSellerHubDraft ? (
+            <Button onClick={() => setLocation("/history")} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Seller Hub draft ready</Button>
+          ) : isNativeSellerHubDraft && (listing.data.status === "draft submitted" || listing.data.status === "draft processing" || listing.data.status === "failed") ? (
+            <Button onClick={checkDraftStatus} disabled={refreshDraftStatus.isPending} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
+              {refreshDraftStatus.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RotateCcw className="mr-2 size-4" />}
+              {refreshDraftStatus.isPending ? "Checking eBay…" : listing.data.status === "failed" ? "Review failed task" : "Check draft status"}
+            </Button>
+          ) : (
+            <Button onClick={hasUnsavedReviewChanges ? save : saveAndCreate} disabled={saveReview.isPending || createDraft.isPending || ebayStatus.isLoading} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
+              {saveReview.isPending || createDraft.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              {saveReview.isPending
+                ? "Saving review…"
+                : createDraft.isPending
+                  ? "Submitting native draft…"
+                  : hasUnsavedReviewChanges
+                    ? "Save review to continue"
+                    : listing.data.status === "failed"
+                      ? "Retry Seller Hub draft"
+                      : listing.data.status === "draft created"
+                        ? "Create native Seller Hub draft"
+                        : ownedPhotoUrls.length
+                          ? "Create Seller Hub draft"
+                          : "Create photo-pending draft"}
+            </Button>
+          )}
         </div>
       </div>
     </DashboardLayout>
