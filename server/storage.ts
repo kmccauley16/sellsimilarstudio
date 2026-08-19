@@ -25,6 +25,11 @@ function getClient() {
     // Optional: point at an S3-compatible provider (Cloudflare R2, MinIO, etc.) instead of AWS.
     endpoint: process.env.S3_ENDPOINT || undefined,
     forcePathStyle: Boolean(process.env.S3_ENDPOINT),
+    // The SDK enables flexible checksums (extra x-amz-* headers) by default since v3.729;
+    // Cloudflare R2 rejects those headers outright, so every request fails signature
+    // validation unless this is explicitly turned back down to opt-in only.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
   return _client;
 }

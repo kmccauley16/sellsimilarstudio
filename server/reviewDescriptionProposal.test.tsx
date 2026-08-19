@@ -176,7 +176,7 @@ describe("Review AI description proposal", () => {
     expect(mocks.attestPhotoRightsMutate).not.toHaveBeenCalled();
   });
 
-  it("turns an unsaved edit into a visible save action without a final-details confirmation control", async () => {
+  it("saves an unsaved edit and creates the eBay draft in the same click, without a final-details confirmation control", async () => {
     const user = userEvent.setup();
     render(<Review />);
 
@@ -186,11 +186,11 @@ describe("Review AI description proposal", () => {
     const description = screen.getByLabelText("Description");
     await user.type(description, " Revised after inspection.");
 
-    await user.click(screen.getAllByRole("button", { name: "Save review to continue" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Save photo-pending draft" })[0]);
     expect(mocks.saveReviewMutate).toHaveBeenCalledWith(expect.objectContaining({
       id: 42,
       description: "<p>Original lamp description.</p> Revised after inspection.",
     }));
-    expect(mocks.createDraftMutate).not.toHaveBeenCalled();
+    expect(mocks.createDraftMutate).toHaveBeenCalledWith({ listingImportId: 42 }, expect.anything());
   });
 });

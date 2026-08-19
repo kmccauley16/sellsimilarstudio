@@ -204,8 +204,6 @@ export default function Review() {
     [form.description, form.itemSpecifics, form.keywords, form.title],
   );
 
-  const save = () => saveReview.mutate(reviewPayload());
-
   const requestDescriptionProposal = () => {
     if (!form.title.trim()) {
       toast.info("Enter a title before generating a description.");
@@ -365,43 +363,44 @@ export default function Review() {
     }
   };
 
-  const draftPreflightCheck = () => {
+  const hasOffer = Boolean(listing.data?.offerId) && listing.data?.status !== "failed";
+
+  // A single action that always does the next useful thing: save any pending edits, then
+  // either save an eBay draft (first time) or sync-and-publish it (once a draft exists).
+  const runPrimaryAction = async () => {
+    if (listing.data?.status === "published" && listing.data.sellerHubUrl) {
+      window.open(listing.data.sellerHubUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!ebayStatus.data?.connection) {
       toast.info("Connect your eBay US account first.");
       setLocation("/connection");
-      return false;
+      return;
     }
-    if (hasUnsavedReviewChanges) {
-      toast.info("Save your listing edits before continuing.");
-      return false;
-    }
-    if (readiness.complete !== readiness.checks.length) {
-      toast.error("Complete every draft-readiness field before continuing.");
-      return false;
-    }
-    if (ownedPhotoUrls.length > 0 && !photoRightsConfirmed) {
-      toast.error("Confirm that you own or are authorized to use the uploaded photos before continuing.");
-      return false;
-    }
-    return true;
-  };
-
-  const saveDraft = () => {
-    if (!draftPreflightCheck()) return;
-    createDraft.mutate({ listingImportId: id }, {
-      onSuccess: () => toast.success(
-        ownedPhotoUrls.length
-          ? "Saved as an unpublished eBay draft. Publish it to eBay when you are ready."
-          : "Saved as a photo-pending eBay draft. Add your photos, then publish when ready.",
-      ),
-    });
-  };
-
-  const publishNow = async () => {
-    if (!draftPreflightCheck()) return;
     try {
-      await createDraft.mutateAsync({ listingImportId: id });
-      await publishDraft.mutateAsync({ listingImportId: id });
+      if (hasUnsavedReviewChanges) {
+        await saveReview.mutateAsync(reviewPayload());
+      }
+      if (readiness.complete !== readiness.checks.length) {
+        toast.info("Complete every draft-readiness field to create an eBay draft.");
+        return;
+      }
+      if (ownedPhotoUrls.length > 0 && !photoRightsConfirmed) {
+        toast.error("Confirm that you own or are authorized to use the uploaded photos before continuing.");
+        return;
+      }
+      if (hasOffer) {
+        await createDraft.mutateAsync({ listingImportId: id });
+        await publishDraft.mutateAsync({ listingImportId: id });
+      } else {
+        await createDraft.mutateAsync({ listingImportId: id }, {
+          onSuccess: () => toast.success(
+            ownedPhotoUrls.length
+              ? "Saved as an unpublished eBay draft. Click Publish when you are ready to go live."
+              : "Saved as a photo-pending eBay draft. Add your photos, then publish when ready.",
+          ),
+        });
+      }
     } catch {
       // Failures are already surfaced by each mutation's own error toast.
     }
@@ -428,19 +427,12 @@ export default function Review() {
     );
   }
 
-  const hasOffer = Boolean(listing.data.offerId) && listing.data.status !== "failed";
   const actionProps = {
     status: listing.data.status,
-    hasUnsavedReviewChanges,
     hasOffer,
     ownedPhotoCount: ownedPhotoUrls.length,
-    sellerHubUrl: listing.data.sellerHubUrl,
-    saving: saveReview.isPending,
-    savingDraft: createDraft.isPending,
-    publishing: createDraft.isPending || publishDraft.isPending,
-    onSaveReview: save,
-    onSaveDraft: saveDraft,
-    onPublish: publishNow,
+    busy: saveReview.isPending || createDraft.isPending || publishDraft.isPending,
+    onAction: runPrimaryAction,
   };
 
   return (
@@ -463,12 +455,7 @@ export default function Review() {
               </div>
             ) : null}
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={save} disabled={saveReview.isPending} className="h-11 rounded-xl border-[#d8d5ce] bg-white px-5">
-              {saveReview.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} Save review
-            </Button>
-            <PrimaryDraftAction {...actionProps} />
-          </div>
+          <PrimaryDraftAction {...actionProps} />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
@@ -664,10 +651,7 @@ export default function Review() {
           </aside>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-[#e7e4dd] pt-6 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={save} disabled={saveReview.isPending} className="h-11 rounded-xl border-[#d8d5ce] bg-white px-5">
-            {saveReview.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} Save review
-          </Button>
+        <div className="mt-6 flex justify-end border-t border-[#e7e4dd] pt-6">
           <PrimaryDraftAction {...actionProps} />
         </div>
       </div>
@@ -677,56 +661,32 @@ export default function Review() {
 
 function PrimaryDraftAction({
   status,
-  hasUnsavedReviewChanges,
   hasOffer,
   ownedPhotoCount,
-  sellerHubUrl,
-  saving,
-  savingDraft,
-  publishing,
-  onSaveReview,
-  onSaveDraft,
-  onPublish,
+  busy,
+  onAction,
 }: {
   status: string;
-  hasUnsavedReviewChanges: boolean;
   hasOffer: boolean;
   ownedPhotoCount: number;
-  sellerHubUrl: string | null;
-  saving: boolean;
-  savingDraft: boolean;
-  publishing: boolean;
-  onSaveReview: () => void;
-  onSaveDraft: () => void;
-  onPublish: () => void;
+  busy: boolean;
+  onAction: () => void;
 }) {
-  if (saving) {
-    return <Button disabled className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)]"><Loader2 className="mr-2 size-4 animate-spin" /> Saving review…</Button>;
+  if (status === "published") {
+    return <Button onClick={onAction} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Published — view listing</Button>;
   }
-  if (hasUnsavedReviewChanges) {
-    return <Button onClick={onSaveReview} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]"><Save className="mr-2 size-4" /> Save review to continue</Button>;
-  }
-  if (status === "published" && sellerHubUrl) {
-    return <Button onClick={() => window.open(sellerHubUrl, "_blank", "noopener,noreferrer")} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Published — view listing</Button>;
-  }
-  if (hasOffer) {
-    return (
-      <Button onClick={onPublish} disabled={publishing} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-        {publishing ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-        {publishing ? "Publishing…" : "Publish to eBay"}
-      </Button>
-    );
-  }
+  const label = busy
+    ? hasOffer ? "Publishing…" : "Saving…"
+    : hasOffer
+      ? "Publish to eBay"
+      : status === "failed"
+        ? "Retry eBay draft"
+        : ownedPhotoCount
+          ? "Save eBay draft"
+          : "Save photo-pending draft";
   return (
-    <Button onClick={onSaveDraft} disabled={savingDraft} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-      {savingDraft ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-      {savingDraft
-        ? "Saving draft…"
-        : status === "failed"
-          ? "Retry eBay draft"
-          : ownedPhotoCount
-            ? "Save eBay draft"
-            : "Save photo-pending draft"}
+    <Button onClick={onAction} disabled={busy} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
+      {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} {label}
     </Button>
   );
 }

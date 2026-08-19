@@ -199,7 +199,8 @@ export const listingRouter = router({
         return serializeListing(updated);
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        throw new TRPCError({ code: "BAD_GATEWAY", message: "The photo could not be uploaded. Try a smaller JPEG or PNG image." });
+        console.error("[uploadOwnedPhoto] storage upload failed", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "The photo could not be uploaded. Check the photo storage configuration and try again." });
       }
     }),
 
