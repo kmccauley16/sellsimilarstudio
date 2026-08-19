@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { TRPCClientError } from "@trpc/client";
 import {
   getKeywordCoverage,
   insertKeywordIntoDescription,
@@ -311,35 +312,57 @@ export default function Review() {
     );
   }, [form, listing.data]);
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    // Some browsers leave `type` blank for less common formats (e.g. HEIC from a phone camera
-    // roll); let those through too and rely on the server's real image decoder to validate.
-    if (file.type && !file.type.startsWith("image/")) {
-      toast.error("Upload a photo file.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Choose a photo smaller than 10 MB.");
-      return;
-    }
-    // The server normalizes every upload to JPEG regardless of source format, so this only
-    // needs to satisfy the request schema, not describe the file's real type.
-    const mimeType = isAcceptedUploadMimeType(file.type) ? file.type : "image/jpeg";
+  const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => toast.error("That photo could not be read. Try another file.");
+    reader.onerror = () => reject(new Error("That photo could not be read. Try another file."));
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
       const base64 = result.includes(",") ? result.slice(result.indexOf(",") + 1) : "";
       if (!base64) {
-        toast.error("That photo could not be read. Try another file.");
+        reject(new Error("That photo could not be read. Try another file."));
         return;
       }
-      uploadOwnedPhoto.mutate({ id, mimeType, base64 });
+      resolve(base64);
     };
     reader.readAsDataURL(file);
+  });
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+
+    let uploaded = 0;
+    for (const file of files) {
+      if (ownedPhotoUrls.length + uploaded >= 12) {
+        toast.info("You can add up to 12 seller-owned photos.");
+        break;
+      }
+      // Some browsers leave `type` blank for less common formats (e.g. HEIC from a phone
+      // camera roll); let those through too and rely on the server's real image decoder.
+      if (file.type && !file.type.startsWith("image/")) {
+        toast.error(`${file.name}: upload a photo file.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name}: choose a photo smaller than 10 MB.`);
+        continue;
+      }
+      // The server normalizes every upload to JPEG regardless of source format, so this only
+      // needs to satisfy the request schema, not describe the file's real type.
+      const mimeType = isAcceptedUploadMimeType(file.type) ? file.type : "image/jpeg";
+      try {
+        const base64 = await readFileAsBase64(file);
+        await uploadOwnedPhoto.mutateAsync({ id, mimeType, base64 });
+        uploaded += 1;
+      } catch (error) {
+        // The mutation's own onError already toasts eBay/server failures; only
+        // surface a message here for errors that never reached the network call.
+        if (!(error instanceof TRPCClientError)) {
+          toast.error(error instanceof Error ? `${file.name}: ${error.message}` : `${file.name}: upload failed.`);
+        }
+      }
+    }
   };
 
   const draftPreflightCheck = () => {
@@ -567,8 +590,8 @@ export default function Review() {
                   </div>
                   <label className={`inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#cfd8fb] bg-white px-4 text-sm font-medium text-[#3156d8] transition-colors hover:bg-[#eef1ff] ${uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12 ? "pointer-events-none opacity-60" : ""}`}>
                     {uploadOwnedPhoto.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <ImagePlus className="mr-2 size-4" />}
-                    {uploadOwnedPhoto.isPending ? "Uploading…" : "Upload photo"}
-                    <input aria-label="Upload your photo" type="file" accept="image/*" className="sr-only" onChange={handlePhotoUpload} disabled={uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12} />
+                    {uploadOwnedPhoto.isPending ? "Uploading…" : "Upload photos"}
+                    <input aria-label="Upload your photos" type="file" accept="image/*" multiple className="sr-only" onChange={handlePhotoUpload} disabled={uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12} />
                   </label>
                 </div>
               </div>
