@@ -375,7 +375,7 @@ function parseJson<T>(value: string, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
-export function buildDraftPayloads(listing: ListingImport, connection: EbayConnection, sku: string, publicOrigin: string) {
+export function buildDraftPayloads(listing: ListingImport, connection: EbayConnection, sku: string, publicOrigin?: string) {
   if (!listing.categoryId) throw new Error("A category is required before creating the draft");
   if (!listing.price || Number(listing.price) <= 0) throw new Error("A valid USD price is required before creating the draft");
   if (!connection.fulfillmentPolicyId || !connection.paymentPolicyId || !connection.returnPolicyId || !connection.merchantLocationKey) {
@@ -434,7 +434,15 @@ export async function createUnpublishedOffer(accessToken: string, sku: string, p
     existing = { offers: [] };
   }
   const unpublished = existing.offers?.find(offer => offer.status !== "PUBLISHED");
-  if (unpublished?.offerId) return unpublished.offerId;
+  if (unpublished?.offerId) {
+    // Re-sync the offer with the seller's latest edits rather than leaving a stale price, category, or policy set.
+    await ebayRequest<void>(`${base}/offer/${encodeURIComponent(unpublished.offerId)}`, {
+      method: "PUT",
+      headers: apiHeaders(accessToken, true),
+      body: JSON.stringify(payloads.offer),
+    });
+    return unpublished.offerId;
+  }
   const created = await ebayRequest<{ offerId: string }>(`${base}/offer`, {
     method: "POST",
     headers: apiHeaders(accessToken, true),
@@ -444,8 +452,27 @@ export async function createUnpublishedOffer(accessToken: string, sku: string, p
   return created.offerId;
 }
 
+/**
+ * Publishes an existing unpublished offer, turning it into a live eBay listing.
+ * This is the only function in this module that may take a listing live; call it only on explicit seller action.
+ */
+export async function publishOffer(accessToken: string, offerId: string) {
+  const config = getConfig();
+  const base = `${ebayEndpoints(config.environment).api}/sell/inventory/v1`;
+  const result = await ebayRequest<{ listingId?: string }>(`${base}/offer/${encodeURIComponent(offerId)}/publish/`, {
+    method: "POST",
+    headers: apiHeaders(accessToken, true),
+  });
+  if (!result.listingId) throw new Error("eBay did not return a listing ID after publishing");
+  return { listingId: result.listingId };
+}
+
 export function sellerHubDraftUrl(sku: string) {
   return `https://www.ebay.com/sh/lst/drafts?keyword=${encodeURIComponent(sku)}`;
+}
+
+export function ebayListingUrl(listingId: string) {
+  return `https://www.ebay.com/itm/${encodeURIComponent(listingId)}`;
 }
 
 export type NativeSellerHubDraftTask = {

@@ -232,7 +232,7 @@ export async function setItemAccuracyAttested(userId: number, id: number) {
   return getListingImport(userId, id);
 }
 
-export type ListingStatus = "review" | "draft submitted" | "draft processing" | "draft created" | "failed";
+export type ListingStatus = "review" | "draft submitted" | "draft processing" | "draft created" | "published" | "failed";
 
 export async function setListingStatus(
   userId: number,
@@ -364,6 +364,7 @@ export async function createEbayDraft(input: typeof ebayDrafts.$inferInsert) {
       sku: input.sku,
       workflow: input.workflow,
       offerId: input.offerId,
+      listingId: input.listingId,
       feedTaskId: input.feedTaskId,
       feedStatus: input.feedStatus,
       feedSuccessCount: input.feedSuccessCount,
@@ -373,6 +374,23 @@ export async function createEbayDraft(input: typeof ebayDrafts.$inferInsert) {
       sellerHubUrl: input.sellerHubUrl,
     },
   });
+}
+
+export async function markOfferPublished(
+  userId: number,
+  listingImportId: number,
+  input: { listingId: string; url: string },
+) {
+  const db = await requireDb();
+  await db
+    .update(ebayDrafts)
+    .set({ listingId: input.listingId, sellerHubUrl: input.url })
+    .where(and(
+      eq(ebayDrafts.userId, userId),
+      eq(ebayDrafts.listingImportId, listingImportId),
+      eq(ebayDrafts.workflow, "inventory_offer"),
+    ));
+  return getEbayDraftForListing(userId, listingImportId);
 }
 
 export async function updateNativeDraftFeedResult(

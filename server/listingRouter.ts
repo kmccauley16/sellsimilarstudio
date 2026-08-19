@@ -149,6 +149,9 @@ export const listingRouter = router({
       return {
         ...serializeListing(listing),
         draftWorkflow: draft?.workflow ?? null,
+        offerId: draft?.offerId ?? null,
+        listingId: draft?.listingId ?? null,
+        sellerHubUrl: draft?.sellerHubUrl ?? null,
         feedTaskId: draft?.feedTaskId ?? null,
         feedStatus: draft?.feedStatus ?? null,
         feedSuccessCount: draft?.feedSuccessCount ?? null,
@@ -298,6 +301,7 @@ export const listingRouter = router({
     return rows.map(({ listing, draft }) => ({
       ...serializeListing(listing),
       offerId: draft?.offerId ?? null,
+      listingId: draft?.listingId ?? null,
       sku: draft?.sku ?? null,
       workflow: draft?.workflow ?? null,
       feedTaskId: draft?.feedTaskId ?? null,

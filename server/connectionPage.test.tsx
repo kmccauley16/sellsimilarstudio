@@ -24,7 +24,7 @@ vi.mock("@/lib/trpc", () => ({
     ebay: {
       status: {
         useQuery: () => ({
-          data: { configured: true, connection: { ebayUserId: "seller" } },
+          data: { configured: true, connection: { ebayUserId: "seller", setupComplete: false } },
           isLoading: false,
         }),
       },
@@ -32,6 +32,22 @@ vi.mock("@/lib/trpc", () => ({
       startAuthorization: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       completeAuthorization: { useMutation: () => ({ mutate: mocks.completeAuthorization, isPending: false }) },
       disconnect: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      sellerSetup: {
+        useQuery: () => ({
+          data: {
+            fulfillmentPolicies: [{ id: "fulfillment-1", name: "Standard shipping" }],
+            paymentPolicies: [{ id: "payment-1", name: "Standard payment" }],
+            returnPolicies: [{ id: "return-1", name: "30-day returns" }],
+            locations: [{ merchantLocationKey: "SSS-US-IL-CHICAGO", name: "Chicago, Illinois" }],
+            connection: { fulfillmentPolicyId: null, paymentPolicyId: null, returnPolicyId: null, merchantLocationKey: null, setupComplete: false },
+          },
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+        }),
+      },
+      createWarehouseLocation: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      saveSellerSetup: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }));
@@ -49,15 +65,14 @@ describe("Connection native Seller Hub draft workflow", () => {
     window.history.replaceState({}, "", "/connection");
   });
 
-  it("shows native-draft safety and removes obsolete Inventory API policy and warehouse setup", () => {
+  it("shows draft-first safety and the seller setup form once connected", () => {
     render(<Connection />);
 
-    expect(screen.getByText(/ready for native Seller Hub draft submissions/i)).toBeTruthy();
-    expect(screen.getByText(/never calls eBay’s publish endpoint/i)).toBeTruthy();
-    expect(screen.queryByText(/^Seller policies$/i)).toBeNull();
-    expect(screen.queryByRole("button", { name: /set up chicago warehouse/i })).toBeNull();
-    expect(screen.queryByLabelText(/fulfillment policy/i)).toBeNull();
-    expect(screen.queryByLabelText(/inventory location/i)).toBeNull();
+    expect(screen.getByText(/ready to save drafts and publish listings when you approve them/i)).toBeTruthy();
+    expect(screen.getByText(/only called when you click Publish/i)).toBeTruthy();
+    expect(screen.getByText(/^Seller setup$/i)).toBeTruthy();
+    expect(screen.getByText(/Shipping \(fulfillment\) policy/i)).toBeTruthy();
+    expect(screen.getByText(/^Inventory location$/i)).toBeTruthy();
   });
 
   it("scrubs a declined OAuth return and never invokes server-side authorization completion", async () => {

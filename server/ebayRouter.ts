@@ -3,8 +3,11 @@ import { z } from "zod";
 import * as db from "./db";
 import {
   buildAuthorizationUrl,
+  buildDraftPayloads,
   createOrReuseWarehouseLocation,
+  createUnpublishedOffer,
   EBAY_MARKETPLACE_ID,
+  ebayListingUrl,
   encryptToken,
   exchangeAuthorizationCode,
   fetchSellerIdentity,
@@ -13,9 +16,9 @@ import {
   getNativeSellerHubDraftTask,
   getUsableAccessToken,
   isEbayConfigured,
+  publishOffer,
   resolveGrantedScopes,
   sellerHubDraftUrl,
-  submitNativeSellerHubDraft,
   verifyOAuthState,
 } from "./ebayApi";
 import { protectedProcedure, router } from "./_core/trpc";
@@ -294,61 +297,86 @@ export const ebayRouter = router({
       const listing = await db.getListingImport(ctx.user.id, input.listingImportId);
       if (!listing) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
 
-      const existing = await db.getEbayDraftForListing(ctx.user.id, listing.id);
-      if (existing?.workflow === "seller_hub_feed" && existing.feedTaskId && listing.status !== "failed") {
-        try {
-          return await refreshNativeDraftTask(ctx.user.id, listing.id, existing.feedTaskId);
-        } catch (error) {
-          logRedactedEbayFailure("refresh native Seller Hub draft task", error, { listingImportId: listing.id });
-          throw new TRPCError({
-            code: "BAD_GATEWAY",
-            message: "eBay could not verify the Seller Hub draft task. Wait a moment, then check its status again.",
-          });
-        }
-      }
-
       const hasOwnedPhoto = listingHasOwnedPhoto(listing);
       if (hasOwnedPhoto && !listing.photoRightsAttestedAt) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Confirm that you own or are authorized to use the uploaded photos before creating a Seller Hub draft.",
+          message: "Confirm that you own or are authorized to use the uploaded photos before creating a draft.",
         });
       }
-      // eBay permits Draft rows with no Item photo URL. In that case, create a photo-pending
-      // native draft rather than reusing source images; the seller can add their own photos in eBay later.
+
+      const connection = await requireConnection(ctx.user.id);
+      if (!connection.fulfillmentPolicyId || !connection.paymentPolicyId || !connection.returnPolicyId || !connection.merchantLocationKey) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Finish eBay seller setup (shipping, payment, and return policies, plus an inventory location) on the eBay connection page before creating a draft.",
+        });
+      }
+
+      const sku = `SSS-${ctx.user.id}-${listing.id}`.slice(0, 50);
+      // eBay allows an offer with no photos, but publishing an image-less offer will fail;
+      // only pass a public origin when there are seller-owned photos to include.
       const publicOrigin = hasOwnedPhoto ? publicRequestOrigin(ctx.req) : undefined;
+
+      let payloads: ReturnType<typeof buildDraftPayloads>;
+      try {
+        payloads = buildDraftPayloads(listing, connection, sku, publicOrigin);
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "This listing is not ready for a draft yet." });
+      }
+
       try {
         const { token } = await usableToken(ctx.user.id);
-        const sku = `SSS-${ctx.user.id}-${listing.id}`.slice(0, 50);
-        const submitted = await submitNativeSellerHubDraft(token, listing, sku, publicOrigin);
-        const hubUrl = sellerHubDraftUrl(sku);
+        const offerId = await createUnpublishedOffer(token, sku, payloads);
         await db.createEbayDraft({
           userId: ctx.user.id,
           listingImportId: listing.id,
           sku,
-          workflow: "seller_hub_feed",
-          offerId: null,
-          feedTaskId: submitted.taskId,
-          feedStatus: submitted.status,
+          workflow: "inventory_offer",
+          offerId,
+          listingId: null,
+          feedTaskId: null,
+          feedStatus: null,
           feedSuccessCount: null,
           feedFailureCount: null,
           resultMessage: null,
           marketplaceId: EBAY_MARKETPLACE_ID,
-          sellerHubUrl: hubUrl,
+          sellerHubUrl: null,
         });
-        await db.setListingStatus(ctx.user.id, listing.id, "draft submitted");
+        await db.setListingStatus(ctx.user.id, listing.id, "draft created");
         return {
-          taskId: submitted.taskId,
-          status: "draft submitted" as const,
-          feedStatus: submitted.status,
-          sellerHubUrl: hubUrl,
-          message: "eBay received the native Seller Hub draft submission. Check its status before assuming the draft is ready.",
+          offerId,
+          status: "draft created" as const,
+          message: "Saved as an unpublished eBay offer. Nothing is live until you publish it.",
         };
       } catch (error) {
-        logRedactedEbayFailure("submit native Seller Hub draft", error, { listingImportId: listing.id });
-        const message = "eBay could not submit the native Seller Hub draft. Review the listing fields and try again.";
+        logRedactedEbayFailure("create unpublished eBay offer", error, { listingImportId: listing.id });
+        const message = error instanceof Error ? error.message : "eBay could not save this draft. Review the listing fields and try again.";
         await db.setListingStatus(ctx.user.id, listing.id, "failed", message);
         throw new TRPCError({ code: "BAD_GATEWAY", message });
+      }
+    }),
+
+  publishDraft: protectedProcedure
+    .input(z.object({ listingImportId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const draft = await db.getEbayDraftForListing(ctx.user.id, input.listingImportId);
+      if (!draft || draft.workflow !== "inventory_offer" || !draft.offerId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Create the eBay draft before publishing it." });
+      }
+      try {
+        const { token } = await usableToken(ctx.user.id);
+        const { listingId } = await publishOffer(token, draft.offerId);
+        const url = ebayListingUrl(listingId);
+        await db.markOfferPublished(ctx.user.id, input.listingImportId, { listingId, url });
+        await db.setListingStatus(ctx.user.id, input.listingImportId, "published");
+        return { listingId, url };
+      } catch (error) {
+        logRedactedEbayFailure("publish eBay offer", error, { listingImportId: input.listingImportId });
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message: error instanceof Error ? error.message : "eBay could not publish this listing. Review the listing details and try again.",
+        });
       }
     }),
 

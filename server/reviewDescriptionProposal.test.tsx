@@ -39,8 +39,8 @@ const mocks = vi.hoisted(() => {
       state.proposalOptions?.onSuccess?.({ description: "<p>Proposed lamp description.</p>" });
     }),
     saveReviewMutate: vi.fn(),
-    createDraftMutate: vi.fn(),
-    refreshDraftStatusMutate: vi.fn(),
+    createDraftMutate: vi.fn((_vars: unknown, options?: { onSuccess?: () => void }) => options?.onSuccess?.()),
+    publishDraftMutate: vi.fn(),
     uploadOwnedPhotoMutate: vi.fn(),
     removeOwnedPhotoMutate: vi.fn(),
     attestPhotoRightsMutate: vi.fn(),
@@ -88,8 +88,8 @@ vi.mock("@/lib/trpc", () => ({
     },
     ebay: {
       status: { useQuery: () => ({ data: { connection: { setupComplete: true } }, isLoading: false }) },
-      createDraft: { useMutation: () => ({ mutate: mocks.createDraftMutate, isPending: false }) },
-      refreshDraftStatus: { useMutation: () => ({ mutate: mocks.refreshDraftStatusMutate, isPending: false }) },
+      createDraft: { useMutation: () => ({ mutate: mocks.createDraftMutate, mutateAsync: mocks.createDraftMutate, isPending: false }) },
+      publishDraft: { useMutation: () => ({ mutate: mocks.publishDraftMutate, mutateAsync: mocks.publishDraftMutate, isPending: false }) },
     },
   },
 }));
@@ -112,7 +112,7 @@ afterEach(() => {
   mocks.proposalMutate.mockClear();
   mocks.saveReviewMutate.mockClear();
   mocks.createDraftMutate.mockClear();
-  mocks.refreshDraftStatusMutate.mockClear();
+  mocks.publishDraftMutate.mockClear();
   mocks.uploadOwnedPhotoMutate.mockClear();
   mocks.removeOwnedPhotoMutate.mockClear();
   mocks.attestPhotoRightsMutate.mockClear();
@@ -169,10 +169,10 @@ describe("Review AI description proposal", () => {
     const user = userEvent.setup();
     render(<Review />);
 
-    expect(screen.getByText(/No desktop photo is needed\./)).not.toBeNull();
+    expect(screen.getByText(/No photo is required to save this draft\./)).not.toBeNull();
     expect(screen.queryByText(/This listing accurately describes the item I have/i)).toBeNull();
-    await user.click(screen.getAllByRole("button", { name: "Create photo-pending draft" })[0]);
-    expect(mocks.createDraftMutate).toHaveBeenCalledWith({ listingImportId: 42 });
+    await user.click(screen.getAllByRole("button", { name: "Save photo-pending draft" })[0]);
+    expect(mocks.createDraftMutate).toHaveBeenCalledWith({ listingImportId: 42 }, expect.anything());
     expect(mocks.attestPhotoRightsMutate).not.toHaveBeenCalled();
   });
 

@@ -79,7 +79,7 @@ export const listingImports = mysqlTable(
     categoryId: varchar("categoryId", { length: 32 }),
     categoryName: varchar("categoryName", { length: 255 }),
     quantity: int("quantity").default(1).notNull(),
-    status: mysqlEnum("status", ["review", "draft submitted", "draft processing", "draft created", "failed"])
+    status: mysqlEnum("status", ["review", "draft submitted", "draft processing", "draft created", "published", "failed"])
       .default("review")
       .notNull(),
     errorMessage: text("errorMessage"),
@@ -107,6 +107,8 @@ export const ebayDrafts = mysqlTable(
       .default("inventory_offer")
       .notNull(),
     offerId: varchar("offerId", { length: 64 }),
+    // eBay's live item ID, set only after the seller explicitly publishes this offer.
+    listingId: varchar("listingId", { length: 64 }),
     feedTaskId: varchar("feedTaskId", { length: 128 }),
     feedStatus: varchar("feedStatus", { length: 48 }),
     feedSuccessCount: int("feedSuccessCount"),

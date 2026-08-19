@@ -1,0 +1,2 @@
+ALTER TABLE `listing_imports` MODIFY COLUMN `status` enum('review','draft submitted','draft processing','draft created','published','failed') NOT NULL DEFAULT 'review';--> statement-breakpoint
+ALTER TABLE `ebay_drafts` ADD `listingId` varchar(64);

@@ -209,7 +209,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
               <ShieldCheck className="size-4" />
             </div>
             <p className="text-xs font-semibold text-white">Draft-first safety</p>
-            <p className="mt-1.5 text-[11px] leading-5 text-[#8999a9]">The app submits a native Seller Hub draft. It never presses publish for you.</p>
+            <p className="mt-1.5 text-[11px] leading-5 text-[#8999a9]">The app saves an unpublished eBay draft. It only goes live when you click Publish.</p>
           </div>
         </SidebarContent>
         <SidebarFooter className="p-3">

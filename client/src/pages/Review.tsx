@@ -136,24 +136,8 @@ export default function Review() {
   });
 
   const createDraft = trpc.ebay.createDraft.useMutation({
-    onSuccess: async data => {
+    onSuccess: async () => {
       await Promise.all([utils.listing.get.invalidate({ id }), utils.listing.history.invalidate()]);
-      const completed = data.status === "draft created";
-      const photoPending = ownedPhotoUrls.length === 0;
-      toast.success(
-        completed
-          ? photoPending
-            ? "Photo-pending Seller Hub draft created. Add your own photos in eBay before listing it."
-            : "Native Seller Hub draft created. It is ready in eBay Drafts."
-          : photoPending
-            ? "eBay received the photo-pending draft submission. Check its status, then add your own photos in eBay before listing it."
-            : "eBay received the native draft submission. Check its status before assuming it is ready.",
-        {
-          action: completed && data.sellerHubUrl
-            ? { label: "Open eBay", onClick: () => window.open(data.sellerHubUrl!, "_blank", "noopener,noreferrer") }
-            : undefined,
-        },
-      );
     },
     onError: async error => {
       await Promise.all([utils.listing.get.invalidate({ id }), utils.listing.history.invalidate()]);
@@ -161,22 +145,17 @@ export default function Review() {
     },
   });
 
-  const refreshDraftStatus = trpc.ebay.refreshDraftStatus.useMutation({
+  const publishDraft = trpc.ebay.publishDraft.useMutation({
     onSuccess: async data => {
       await Promise.all([utils.listing.get.invalidate({ id }), utils.listing.history.invalidate()]);
-      if (data.status === "draft created") {
-        toast.success("Native Seller Hub draft created. It is ready in eBay Drafts.", {
-          action: data.sellerHubUrl
-            ? { label: "Open eBay", onClick: () => window.open(data.sellerHubUrl!, "_blank", "noopener,noreferrer") }
-            : undefined,
-        });
-      } else if (data.status === "failed") {
-        toast.error(data.message ?? "eBay could not create the Seller Hub draft.");
-      } else {
-        toast.info("eBay is still processing the native Seller Hub draft. Check again shortly.");
-      }
+      toast.success("Published to eBay. Your listing is now live.", {
+        action: { label: "View listing", onClick: () => window.open(data.url, "_blank", "noopener,noreferrer") },
+      });
     },
-    onError: error => toast.error(error.message),
+    onError: async error => {
+      await Promise.all([utils.listing.get.invalidate({ id }), utils.listing.history.invalidate()]);
+      toast.error(error.message);
+    },
   });
 
   const ownedPhotoUrls = listing.data?.ownedImageUrls ?? [];
@@ -326,8 +305,6 @@ export default function Review() {
     );
   }, [form, listing.data]);
 
-  const checkDraftStatus = () => refreshDraftStatus.mutate({ listingImportId: id });
-
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -355,25 +332,46 @@ export default function Review() {
     reader.readAsDataURL(file);
   };
 
-  const saveAndCreate = () => {
+  const draftPreflightCheck = () => {
     if (!ebayStatus.data?.connection) {
       toast.info("Connect your eBay US account first.");
       setLocation("/connection");
-      return;
+      return false;
     }
     if (hasUnsavedReviewChanges) {
-      toast.info("Save your listing edits before creating a draft.");
-      return;
+      toast.info("Save your listing edits before continuing.");
+      return false;
     }
     if (readiness.complete !== readiness.checks.length) {
       toast.error("Complete every draft-readiness field before continuing.");
-      return;
+      return false;
     }
     if (ownedPhotoUrls.length > 0 && !photoRightsConfirmed) {
       toast.error("Confirm that you own or are authorized to use the uploaded photos before continuing.");
-      return;
+      return false;
     }
-    createDraft.mutate({ listingImportId: id });
+    return true;
+  };
+
+  const saveDraft = () => {
+    if (!draftPreflightCheck()) return;
+    createDraft.mutate({ listingImportId: id }, {
+      onSuccess: () => toast.success(
+        ownedPhotoUrls.length
+          ? "Saved as an unpublished eBay draft. Publish it to eBay when you are ready."
+          : "Saved as a photo-pending eBay draft. Add your photos, then publish when ready.",
+      ),
+    });
+  };
+
+  const publishNow = async () => {
+    if (!draftPreflightCheck()) return;
+    try {
+      await createDraft.mutateAsync({ listingImportId: id });
+      await publishDraft.mutateAsync({ listingImportId: id });
+    } catch {
+      // Failures are already surfaced by each mutation's own error toast.
+    }
   };
 
   if (listing.isLoading) {
@@ -397,7 +395,20 @@ export default function Review() {
     );
   }
 
-  const isNativeSellerHubDraft = listing.data.draftWorkflow === "seller_hub_feed";
+  const hasOffer = Boolean(listing.data.offerId) && listing.data.status !== "failed";
+  const actionProps = {
+    status: listing.data.status,
+    hasUnsavedReviewChanges,
+    hasOffer,
+    ownedPhotoCount: ownedPhotoUrls.length,
+    sellerHubUrl: listing.data.sellerHubUrl,
+    saving: saveReview.isPending,
+    savingDraft: createDraft.isPending,
+    publishing: createDraft.isPending || publishDraft.isPending,
+    onSaveReview: save,
+    onSaveDraft: saveDraft,
+    onPublish: publishNow,
+  };
 
   return (
     <DashboardLayout>
@@ -409,13 +420,13 @@ export default function Review() {
             </button>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-display text-4xl tracking-[-0.04em] text-[#17212b]">Review the details.</h1>
-              <Badge className="rounded-full bg-[#e7ebfb] px-3 py-1 text-[10px] font-semibold tracking-[0.1em] text-[#3655c8] uppercase shadow-none hover:bg-[#e7ebfb]">Seller Hub drafts only</Badge>
+              <Badge className="rounded-full bg-[#e7ebfb] px-3 py-1 text-[10px] font-semibold tracking-[0.1em] text-[#3655c8] uppercase shadow-none hover:bg-[#e7ebfb]">Publish only when you say so</Badge>
             </div>
-            <p className="mt-3 text-sm leading-6 text-[#5b6874]">Everything remains editable. Save your review before submitting a native Seller Hub draft; this workflow never publishes it.</p>
+            <p className="mt-3 text-sm leading-6 text-[#5b6874]">Everything remains editable. Saving stores an unpublished eBay draft; nothing goes live until you click Publish.</p>
             {listing.data.status === "failed" ? (
               <div role="alert" className="mt-4 flex max-w-2xl gap-3 rounded-xl border border-[#f0c9c4] bg-[#fff5f3] p-3 text-sm leading-5 text-[#7d3f38]">
                 <CircleAlert className="mt-0.5 size-4 shrink-0" />
-                <p><span className="font-semibold">Seller Hub draft needs attention.</span> {listing.data.draftResultMessage ?? "eBay did not create the draft. Use the read-only status check to retrieve the completed task detail; no new draft will be submitted."}</p>
+                <p><span className="font-semibold">eBay draft needs attention.</span> {listing.data.draftResultMessage ?? "eBay could not save this draft. Review the listing fields and try again."}</p>
               </div>
             ) : null}
           </div>
@@ -423,31 +434,7 @@ export default function Review() {
             <Button variant="outline" onClick={save} disabled={saveReview.isPending} className="h-11 rounded-xl border-[#d8d5ce] bg-white px-5">
               {saveReview.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} Save review
             </Button>
-            {listing.data.status === "draft created" && isNativeSellerHubDraft ? (
-              <Button onClick={() => setLocation("/history")} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Seller Hub draft ready</Button>
-            ) : isNativeSellerHubDraft && (listing.data.status === "draft submitted" || listing.data.status === "draft processing" || listing.data.status === "failed") ? (
-              <Button onClick={checkDraftStatus} disabled={refreshDraftStatus.isPending} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-                {refreshDraftStatus.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RotateCcw className="mr-2 size-4" />}
-                {refreshDraftStatus.isPending ? "Checking eBay…" : listing.data.status === "failed" ? "Review failed task" : "Check draft status"}
-              </Button>
-            ) : (
-              <Button onClick={hasUnsavedReviewChanges ? save : saveAndCreate} disabled={saveReview.isPending || createDraft.isPending || ebayStatus.isLoading} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-                {saveReview.isPending || createDraft.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                {saveReview.isPending
-                  ? "Saving review…"
-                  : createDraft.isPending
-                    ? "Submitting native draft…"
-                    : hasUnsavedReviewChanges
-                      ? "Save review to continue"
-                      : listing.data.status === "failed"
-                        ? "Retry Seller Hub draft"
-                        : listing.data.status === "draft created"
-                          ? "Create native Seller Hub draft"
-                          : ownedPhotoUrls.length
-                            ? "Create Seller Hub draft"
-                            : "Create photo-pending draft"}
-              </Button>
-            )}
+            <PrimaryDraftAction {...actionProps} />
           </div>
         </div>
 
@@ -564,8 +551,8 @@ export default function Review() {
                   <div className="flex gap-3">
                     <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-[#e4eaff] text-[#3156d8]"><ImagePlus className="size-4" /></span>
                     <div>
-                      <p className="text-sm font-semibold text-[#26323d]">Optional: include photos now, or finish them on your phone.</p>
-                      <p className="mt-1 text-xs leading-5 text-[#5c6875]">You can create a photo-pending Seller Hub draft from this review, then add your own photos in eBay on your phone before listing it. JPEG or PNG uploads here are optional and can be included immediately.</p>
+                      <p className="text-sm font-semibold text-[#26323d]">Add your own photos here.</p>
+                      <p className="mt-1 text-xs leading-5 text-[#5c6875]">You can save a draft now and add photos later, but publishing to eBay requires at least one JPEG or PNG upload.</p>
                     </div>
                   </div>
                   <label className={`inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#cfd8fb] bg-white px-4 text-sm font-medium text-[#3156d8] transition-colors hover:bg-[#eef1ff] ${uploadOwnedPhoto.isPending || ownedPhotoUrls.length >= 12 ? "pointer-events-none opacity-60" : ""}`}>
@@ -592,7 +579,7 @@ export default function Review() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-[#d6d2c9] bg-[#faf9f7] p-7 text-center text-sm leading-6 text-[#596674]">No desktop photo is needed. Create a photo-pending Seller Hub draft now, then add your own photos in eBay on your phone before listing it.</div>
+                <div className="mt-5 rounded-2xl border border-dashed border-[#d6d2c9] bg-[#faf9f7] p-7 text-center text-sm leading-6 text-[#596674]">No photo is required to save this draft. Upload one above whenever you're ready — you'll need at least one before you can publish.</div>
               )}
 
               <div className="mt-5 space-y-3 rounded-2xl border border-[#e7e4dd] bg-[#faf9f7] p-4">
@@ -632,7 +619,7 @@ export default function Review() {
                 ))}
               </div>
               <div className="mt-6 border-t border-white/10 pt-5">
-                <div className="flex gap-3 text-[11px] leading-5 text-[#93a2af]"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#8da2ff]" /><p>This creates a native Seller Hub draft only. It never publishes. You may leave photos for later, but add your own photos in eBay before listing it.</p></div>
+                <div className="flex gap-3 text-[11px] leading-5 text-[#93a2af]"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#8da2ff]" /><p>Saving stores an unpublished eBay draft only. Nothing goes live until you click Publish, and publishing requires at least one photo.</p></div>
               </div>
             </Card>
 
@@ -648,34 +635,66 @@ export default function Review() {
           <Button variant="outline" onClick={save} disabled={saveReview.isPending} className="h-11 rounded-xl border-[#d8d5ce] bg-white px-5">
             {saveReview.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />} Save review
           </Button>
-          {listing.data.status === "draft created" && isNativeSellerHubDraft ? (
-            <Button onClick={() => setLocation("/history")} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Seller Hub draft ready</Button>
-          ) : isNativeSellerHubDraft && (listing.data.status === "draft submitted" || listing.data.status === "draft processing" || listing.data.status === "failed") ? (
-            <Button onClick={checkDraftStatus} disabled={refreshDraftStatus.isPending} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-              {refreshDraftStatus.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RotateCcw className="mr-2 size-4" />}
-              {refreshDraftStatus.isPending ? "Checking eBay…" : listing.data.status === "failed" ? "Review failed task" : "Check draft status"}
-            </Button>
-          ) : (
-            <Button onClick={hasUnsavedReviewChanges ? save : saveAndCreate} disabled={saveReview.isPending || createDraft.isPending || ebayStatus.isLoading} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
-              {saveReview.isPending || createDraft.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              {saveReview.isPending
-                ? "Saving review…"
-                : createDraft.isPending
-                  ? "Submitting native draft…"
-                  : hasUnsavedReviewChanges
-                    ? "Save review to continue"
-                    : listing.data.status === "failed"
-                      ? "Retry Seller Hub draft"
-                      : listing.data.status === "draft created"
-                        ? "Create native Seller Hub draft"
-                        : ownedPhotoUrls.length
-                          ? "Create Seller Hub draft"
-                          : "Create photo-pending draft"}
-            </Button>
-          )}
+          <PrimaryDraftAction {...actionProps} />
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function PrimaryDraftAction({
+  status,
+  hasUnsavedReviewChanges,
+  hasOffer,
+  ownedPhotoCount,
+  sellerHubUrl,
+  saving,
+  savingDraft,
+  publishing,
+  onSaveReview,
+  onSaveDraft,
+  onPublish,
+}: {
+  status: string;
+  hasUnsavedReviewChanges: boolean;
+  hasOffer: boolean;
+  ownedPhotoCount: number;
+  sellerHubUrl: string | null;
+  saving: boolean;
+  savingDraft: boolean;
+  publishing: boolean;
+  onSaveReview: () => void;
+  onSaveDraft: () => void;
+  onPublish: () => void;
+}) {
+  if (saving) {
+    return <Button disabled className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)]"><Loader2 className="mr-2 size-4 animate-spin" /> Saving review…</Button>;
+  }
+  if (hasUnsavedReviewChanges) {
+    return <Button onClick={onSaveReview} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]"><Save className="mr-2 size-4" /> Save review to continue</Button>;
+  }
+  if (status === "published" && sellerHubUrl) {
+    return <Button onClick={() => window.open(sellerHubUrl, "_blank", "noopener,noreferrer")} className="h-11 rounded-xl bg-[#4f7a58] px-5 hover:bg-[#42694a]"><CheckCircle2 className="mr-2 size-4" /> Published — view listing</Button>;
+  }
+  if (hasOffer) {
+    return (
+      <Button onClick={onPublish} disabled={publishing} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
+        {publishing ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+        {publishing ? "Publishing…" : "Publish to eBay"}
+      </Button>
+    );
+  }
+  return (
+    <Button onClick={onSaveDraft} disabled={savingDraft} className="h-11 rounded-xl bg-[#3156d8] px-5 shadow-[0_8px_20px_rgba(49,86,216,.2)] hover:bg-[#294cc4]">
+      {savingDraft ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+      {savingDraft
+        ? "Saving draft…"
+        : status === "failed"
+          ? "Retry eBay draft"
+          : ownedPhotoCount
+            ? "Save eBay draft"
+            : "Save photo-pending draft"}
+    </Button>
   );
 }
 

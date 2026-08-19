@@ -14,11 +14,16 @@ const mocks = vi.hoisted(() => ({
   getEbayDraftForListing: vi.fn(),
   createEbayDraft: vi.fn(),
   updateNativeDraftFeedResult: vi.fn(),
+  markOfferPublished: vi.fn(),
   setListingStatus: vi.fn(),
   submitNativeSellerHubDraft: vi.fn(),
   getNativeSellerHubDraftTask: vi.fn(),
   getNativeSellerHubDraftFailureDetail: vi.fn(),
   sellerHubDraftUrl: vi.fn(),
+  buildDraftPayloads: vi.fn(),
+  createUnpublishedOffer: vi.fn(),
+  publishOffer: vi.fn(),
+  ebayListingUrl: vi.fn((listingId: string) => `https://www.ebay.com/itm/${listingId}`),
   encryptToken: vi.fn((value: string) => `encrypted:${value}`),
   log: vi.fn(),
 }));
@@ -33,6 +38,7 @@ vi.mock("./db", () => ({
   getEbayDraftForListing: mocks.getEbayDraftForListing,
   createEbayDraft: mocks.createEbayDraft,
   updateNativeDraftFeedResult: mocks.updateNativeDraftFeedResult,
+  markOfferPublished: mocks.markOfferPublished,
   setListingStatus: mocks.setListingStatus,
   listListingHistory: vi.fn(),
 }));
@@ -40,9 +46,11 @@ vi.mock("./db", () => ({
 vi.mock("./ebayApi", () => ({
   EBAY_MARKETPLACE_ID: "EBAY_US",
   buildAuthorizationUrl: vi.fn(),
-  buildDraftPayloads: vi.fn(),
+  buildDraftPayloads: mocks.buildDraftPayloads,
   createOrReuseWarehouseLocation: mocks.createOrReuseWarehouseLocation,
-  createUnpublishedOffer: vi.fn(),
+  createUnpublishedOffer: mocks.createUnpublishedOffer,
+  ebayListingUrl: mocks.ebayListingUrl,
+  publishOffer: mocks.publishOffer,
   decryptToken: vi.fn(),
   encryptToken: mocks.encryptToken,
   exchangeAuthorizationCode: mocks.exchangeAuthorizationCode,
@@ -262,7 +270,7 @@ describe("ebay.completeAuthorization error safety", () => {
   });
 });
 
-describe("native Seller Hub draft task safety", () => {
+describe("eBay draft and publish safety", () => {
   const connection = {
     userId: 1,
     marketplaceId: "EBAY_US",
@@ -272,10 +280,10 @@ describe("native Seller Hub draft task safety", () => {
     refreshTokenEncrypted: "encrypted-refresh-token",
     accessTokenExpiresAt: new Date(Date.now() + 60_000),
     refreshTokenExpiresAt: new Date(Date.now() + 60_000),
-    fulfillmentPolicyId: null,
-    paymentPolicyId: null,
-    returnPolicyId: null,
-    merchantLocationKey: null,
+    fulfillmentPolicyId: "fulfillment-1",
+    paymentPolicyId: "payment-1",
+    returnPolicyId: "return-1",
+    merchantLocationKey: "warehouse-us",
   };
   const listing = {
     id: 200,
@@ -286,6 +294,10 @@ describe("native Seller Hub draft task safety", () => {
     photoRightsAttestedAt: new Date(),
     itemAccuracyAttestedAt: new Date(),
   };
+  const payloads = {
+    inventoryItem: { sku: "SSS-1-200" },
+    offer: { sku: "SSS-1-200", marketplaceId: "EBAY_US", format: "FIXED_PRICE" },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -294,8 +306,12 @@ describe("native Seller Hub draft task safety", () => {
     mocks.getListingImport.mockResolvedValue(listing);
     mocks.getEbayDraftForListing.mockResolvedValue(undefined);
     mocks.createEbayDraft.mockResolvedValue(undefined);
+    mocks.markOfferPublished.mockResolvedValue(undefined);
     mocks.updateNativeDraftFeedResult.mockResolvedValue({ sku: "SSS-1-200", sellerHubUrl: "https://www.ebay.com/sh/lst/drafts?keyword=SSS-1-200" });
     mocks.setListingStatus.mockResolvedValue(undefined);
+    mocks.buildDraftPayloads.mockReturnValue(payloads);
+    mocks.createUnpublishedOffer.mockResolvedValue("offer-500");
+    mocks.publishOffer.mockResolvedValue({ listingId: "listing-900" });
     mocks.submitNativeSellerHubDraft.mockResolvedValue({ taskId: "task-200", status: "QUEUED" });
     mocks.getNativeSellerHubDraftTask.mockResolvedValue({ taskId: "task-200", status: "IN_PROCESS", successCount: 0, failureCount: 0 });
     mocks.getNativeSellerHubDraftFailureDetail.mockResolvedValue(undefined);
@@ -303,36 +319,85 @@ describe("native Seller Hub draft task safety", () => {
     mocks.log.mockClear();
   });
 
-  it("records only a submitted native task until eBay confirms a completed draft", async () => {
-    await expect(caller.createDraft({ listingImportId: 200 })).resolves.toMatchObject({
-      taskId: "task-200",
-      status: "draft submitted",
-      feedStatus: "QUEUED",
+  it("requires completed seller setup before creating a draft", async () => {
+    mocks.getEbayConnection.mockResolvedValue({
+      ...connection,
+      fulfillmentPolicyId: null,
     });
 
-    expect(mocks.submitNativeSellerHubDraft).toHaveBeenCalledWith("access-token", listing, "SSS-1-200", "https://app.example.test");
-    expect(mocks.createEbayDraft).toHaveBeenCalledWith(expect.objectContaining({
-      workflow: "seller_hub_feed",
-      offerId: null,
-      feedTaskId: "task-200",
-      feedStatus: "QUEUED",
-    }));
-    expect(mocks.setListingStatus).toHaveBeenCalledWith(1, 200, "draft submitted");
-    expect(mocks.getNativeSellerHubDraftTask).not.toHaveBeenCalled();
+    await expect(caller.createDraft({ listingImportId: 200 })).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+    });
+    expect(mocks.createUnpublishedOffer).not.toHaveBeenCalled();
   });
 
-  it("does not require an item-accuracy confirmation to create a photo-pending native task", async () => {
+  it("saves an unpublished eBay offer and marks the listing draft created", async () => {
+    await expect(caller.createDraft({ listingImportId: 200 })).resolves.toMatchObject({
+      offerId: "offer-500",
+      status: "draft created",
+    });
+
+    expect(mocks.buildDraftPayloads).toHaveBeenCalledWith(listing, connection, "SSS-1-200", "https://app.example.test");
+    expect(mocks.createUnpublishedOffer).toHaveBeenCalledWith("access-token", "SSS-1-200", payloads);
+    expect(mocks.createEbayDraft).toHaveBeenCalledWith(expect.objectContaining({
+      workflow: "inventory_offer",
+      offerId: "offer-500",
+      listingId: null,
+    }));
+    expect(mocks.setListingStatus).toHaveBeenCalledWith(1, 200, "draft created");
+    expect(mocks.submitNativeSellerHubDraft).not.toHaveBeenCalled();
+  });
+
+  it("does not require an item-accuracy confirmation to create a photo-pending offer", async () => {
     mocks.getListingImport.mockResolvedValue({
       ...listing,
       itemAccuracyAttestedAt: null,
     });
 
     await expect(caller.createDraft({ listingImportId: 200 })).resolves.toMatchObject({
-      taskId: "task-200",
-      status: "draft submitted",
+      offerId: "offer-500",
+      status: "draft created",
     });
-    expect(mocks.submitNativeSellerHubDraft).toHaveBeenCalledOnce();
+    expect(mocks.createUnpublishedOffer).toHaveBeenCalledOnce();
     expect(mocks.createEbayDraft).toHaveBeenCalledOnce();
+  });
+
+  it("surfaces eBay's validation message and marks the listing failed when the offer cannot be saved", async () => {
+    mocks.createUnpublishedOffer.mockRejectedValue(new Error("Category 15230 requires a condition."));
+
+    await expect(caller.createDraft({ listingImportId: 200 })).rejects.toMatchObject({
+      code: "BAD_GATEWAY",
+      message: "Category 15230 requires a condition.",
+    });
+    expect(mocks.setListingStatus).toHaveBeenCalledWith(1, 200, "failed", "Category 15230 requires a condition.");
+  });
+
+  it("publishes an existing offer and marks the listing published", async () => {
+    mocks.getEbayDraftForListing.mockResolvedValue({
+      userId: 1,
+      listingImportId: 200,
+      workflow: "inventory_offer",
+      offerId: "offer-500",
+      sku: "SSS-1-200",
+    });
+
+    await expect(caller.publishDraft({ listingImportId: 200 })).resolves.toEqual({
+      listingId: "listing-900",
+      url: "https://www.ebay.com/itm/listing-900",
+    });
+
+    expect(mocks.publishOffer).toHaveBeenCalledWith("access-token", "offer-500");
+    expect(mocks.markOfferPublished).toHaveBeenCalledWith(1, 200, { listingId: "listing-900", url: "https://www.ebay.com/itm/listing-900" });
+    expect(mocks.setListingStatus).toHaveBeenCalledWith(1, 200, "published");
+  });
+
+  it("refuses to publish before a draft offer exists", async () => {
+    mocks.getEbayDraftForListing.mockResolvedValue(undefined);
+
+    await expect(caller.publishDraft({ listingImportId: 200 })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(mocks.publishOffer).not.toHaveBeenCalled();
   });
 
   it("marks a native Seller Hub draft as created only after eBay reports a successful completed task", async () => {
@@ -396,22 +461,4 @@ describe("native Seller Hub draft task safety", () => {
     expect(mocks.submitNativeSellerHubDraft).not.toHaveBeenCalled();
   });
 
-  it("does not allow an existing native task to be resubmitted while it is still pending", async () => {
-    mocks.getEbayDraftForListing.mockResolvedValue({
-      userId: 1,
-      listingImportId: 200,
-      workflow: "seller_hub_feed",
-      feedTaskId: "task-200",
-      sku: "SSS-1-200",
-      sellerHubUrl: "https://www.ebay.com/sh/lst/drafts?keyword=SSS-1-200",
-    });
-
-    await expect(caller.createDraft({ listingImportId: 200 })).resolves.toMatchObject({
-      taskId: "task-200",
-      status: "draft processing",
-    });
-
-    expect(mocks.submitNativeSellerHubDraft).not.toHaveBeenCalled();
-    expect(mocks.getNativeSellerHubDraftTask).toHaveBeenCalledWith("access-token", "task-200");
-  });
 });

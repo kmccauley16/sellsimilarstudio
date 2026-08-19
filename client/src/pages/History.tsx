@@ -17,7 +17,7 @@ export default function History() {
           <div>
             <p className="text-xs font-semibold tracking-[0.14em] text-[#4564e6] uppercase">Activity</p>
             <h1 className="font-display mt-3 text-4xl tracking-[-0.04em] text-[#17212b]">Draft history.</h1>
-            <p className="mt-3 text-sm text-[#596674]">Every imported listing, its latest native Seller Hub draft outcome, and its safe eBay task reference.</p>
+            <p className="mt-3 text-sm text-[#596674]">Every imported listing and whether its eBay draft has been published yet.</p>
           </div>
           <Button onClick={() => setLocation("/")} className="h-11 rounded-xl bg-[#3156d8] px-5 hover:bg-[#294cc4]"><FilePlus2 className="mr-2 size-4" /> New draft</Button>
         </div>
@@ -38,15 +38,15 @@ export default function History() {
                     <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-[#efede8]">
                       {item.imageUrls[0] ? <img src={item.imageUrls[0]} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center"><HistoryIcon className="size-4 text-[#9ba3ab]" /></div>}
                     </div>
-                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-[#24303b]">{item.title}</p><p className="mt-1 text-xs text-[#596674]">Item #{item.sourceItemId}{item.workflow === "seller_hub_feed" && item.feedTaskId ? ` · Draft task ${item.feedTaskId}` : item.offerId ? ` · Legacy offer ${item.offerId}` : ""}</p></div>
+                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-[#24303b]">{item.title}</p><p className="mt-1 text-xs text-[#596674]">Item #{item.sourceItemId}{item.offerId ? ` · Offer ${item.offerId}` : ""}</p></div>
                   </div>
                   <p className="text-xs text-[#697681]">{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
-                  <Status status={item.status} workflow={item.workflow} />
+                  <Status status={item.status} />
                   <div className="flex justify-start md:justify-end">
-                    {item.status === "draft created" && item.workflow === "seller_hub_feed" && item.sellerHubUrl ? (
-                      <a href={item.sellerHubUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d8d5ce] bg-white px-3 text-xs font-semibold text-[#3e4b57] hover:border-[#bfc5da]">Open Seller Hub drafts <ArrowUpRight className="size-3" /></a>
+                    {item.status === "published" && item.sellerHubUrl ? (
+                      <a href={item.sellerHubUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d8d5ce] bg-white px-3 text-xs font-semibold text-[#3e4b57] hover:border-[#bfc5da]">View listing <ArrowUpRight className="size-3" /></a>
                     ) : (
-                      <Button variant="outline" onClick={() => setLocation(`/review/${item.id}`)} className="h-9 rounded-lg border-[#d8d5ce] bg-white text-xs">{item.status === "failed" ? "Review issue" : item.status === "draft submitted" || item.status === "draft processing" ? "Check task" : item.status === "draft created" ? "Create native draft" : "Continue review"}</Button>
+                      <Button variant="outline" onClick={() => setLocation(`/review/${item.id}`)} className="h-9 rounded-lg border-[#d8d5ce] bg-white text-xs">{item.status === "failed" ? "Review issue" : item.status === "draft created" ? "Publish draft" : "Continue review"}</Button>
                     )}
                   </div>
                 </div>
@@ -56,7 +56,7 @@ export default function History() {
             <div className="p-14 text-center">
               <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#eff1f8] text-[#4564e6]"><Clock3 className="size-5" /></div>
               <h2 className="font-display mt-5 text-2xl">No imports yet</h2>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#596674]">Paste your first sold eBay link to begin a review and submit a native Seller Hub draft without publishing.</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#596674]">Paste your first sold eBay link to begin a review and save an eBay draft — you publish it when you're ready.</p>
               <Button onClick={() => setLocation("/")} className="mt-6 rounded-xl bg-[#3156d8] hover:bg-[#294cc4]">Import a listing</Button>
             </div>
           )}
@@ -66,21 +66,20 @@ export default function History() {
   );
 }
 
-function Status({ status, workflow }: { status: "review" | "draft submitted" | "draft processing" | "draft created" | "failed"; workflow: "inventory_offer" | "seller_hub_feed" | null }) {
-  const styles = status === "draft created"
+function Status({ status }: { status: "review" | "draft submitted" | "draft processing" | "draft created" | "published" | "failed" }) {
+  const styles = status === "published"
     ? "bg-[#e8f4eb] text-[#39734b]"
-    : status === "failed"
-      ? "bg-[#f8e9e5] text-[#9b4b41]"
-      : status === "draft processing"
-        ? "bg-[#e8eefb] text-[#3655c8]"
-        : status === "draft submitted"
-          ? "bg-[#eeeafb] text-[#6755a8]"
-          : "bg-[#f3eee1] text-[#806526]";
+    : status === "draft created"
+      ? "bg-[#eeeafb] text-[#6755a8]"
+      : status === "failed"
+        ? "bg-[#f8e9e5] text-[#9b4b41]"
+        : "bg-[#f3eee1] text-[#806526]";
   const labels = {
     review: "in review",
-    "draft submitted": "submitted to eBay",
-    "draft processing": "eBay processing",
-    "draft created": workflow === "seller_hub_feed" ? "Seller Hub draft ready" : "legacy unpublished offer",
+    "draft submitted": "in review",
+    "draft processing": "in review",
+    "draft created": "draft saved, not published",
+    published: "published to eBay",
     failed: "needs attention",
   } as const;
   return <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] lowercase ${styles}`}>{labels[status]}</span>;
