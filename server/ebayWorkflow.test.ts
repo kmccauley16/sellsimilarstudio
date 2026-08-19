@@ -360,9 +360,8 @@ describe("native Seller Hub draft feeds", () => {
 
   it("extracts the eBay validation detail from a CSV-formatted File Exchange result file", async () => {
     const csv = [
-      "Action,Custom label (SKU),Category ID,Title,Condition ID",
-      "Draft,SSS-1-2,139973,Bronkie the Bronchiasaurus Cartridge,6000",
-      '#Error,,,,,,25007,"Category 139973 does not accept condition 6000 for this item."',
+      "Line Number,Action,Status,ErrorCode,ErrorMessage,WarningCode,WarningMessage,Code,Message,ItemID,ReferenceID,ApplicationData,StartTime,EndTime",
+      '1,Draft,Failure,25007,"Category 139973 does not accept condition 6000 for this item.",,,,,,,,,',
     ].join("\n");
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(csv, {
       status: 200,

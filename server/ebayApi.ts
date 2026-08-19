@@ -687,27 +687,40 @@ function splitCsvLine(line: string): string[] {
   return fields.map(field => field.trim());
 }
 
-// eBay's File Exchange (FX) result file is a CSV echoing the upload, with
-// error/warning rows marked in the first column and eBay's numeric error code
-// plus description carried in later columns. The exact column layout isn't
-// guaranteed across accounts/report versions, so this takes the longest
-// plausible free-text field on a marked row as the message, and any adjacent
-// short numeric field as the code, rather than assuming fixed positions.
+// eBay's Feed API result file for FX_LISTING tasks is a CSV with a header row
+// (confirmed in production: "Line Number,Action,Status,ErrorCode,ErrorMessage,
+// WarningCode,WarningMessage,Code,Message,ItemID,...") followed by one row per
+// uploaded line, reporting that row's outcome. This reads the header to find
+// the relevant columns rather than assuming fixed positions, since eBay's
+// report schema has changed across API versions.
 function extractCsvFailureDetail(resultFile: string) {
-  const errorLine = resultFile
-    .split(/\r?\n/)
-    .find(line => /^#?(error|warning)\b/i.test(line.trim()));
-  if (!errorLine) return undefined;
+  const lines = resultFile.split(/\r?\n/).filter(line => line.trim().length > 0);
+  if (lines.length < 2) return undefined;
 
-  const fields = splitCsvLine(errorLine).filter(Boolean);
-  const message = fields
-    .filter(field => !/^#?(error|warning)$/i.test(field))
-    .sort((a, b) => b.length - a.length)[0];
-  if (!message || message.length < 8) return undefined;
+  const header = splitCsvLine(lines[0]).map(field => field.toLowerCase());
+  const indexOf = (...names: string[]) => names.map(name => header.indexOf(name)).find(index => index !== -1) ?? -1;
+  const statusIndex = indexOf("status");
+  const errorCodeIndex = indexOf("errorcode", "code");
+  const errorMessageIndex = indexOf("errormessage", "message");
+  const warningCodeIndex = indexOf("warningcode");
+  const warningMessageIndex = indexOf("warningmessage");
+  if (errorMessageIndex === -1 && warningMessageIndex === -1) return undefined;
 
-  const code = fields.find(field => /^\d{4,6}$/.test(field));
-  const safeMessage = message.slice(0, 360);
-  return code ? `eBay error ${code}: ${safeMessage}` : safeMessage;
+  for (const line of lines.slice(1)) {
+    const fields = splitCsvLine(line);
+    const status = statusIndex !== -1 ? fields[statusIndex] : undefined;
+    const isFailure = status ? /error|fail/i.test(status) : true;
+    const errorMessage = errorMessageIndex !== -1 ? fields[errorMessageIndex] : undefined;
+    const warningMessage = warningMessageIndex !== -1 ? fields[warningMessageIndex] : undefined;
+    const message = (isFailure && errorMessage) || warningMessage;
+    if (!message) continue;
+
+    const code = (isFailure && errorCodeIndex !== -1 ? fields[errorCodeIndex] : undefined)
+      || (warningCodeIndex !== -1 ? fields[warningCodeIndex] : undefined);
+    const safeMessage = message.slice(0, 360);
+    return code ? `eBay error ${code}: ${safeMessage}` : safeMessage;
+  }
+  return undefined;
 }
 
 // Last resort when neither structured parser recognizes the file: show a
