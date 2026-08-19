@@ -357,4 +357,40 @@ describe("native Seller Hub draft feeds", () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it("extracts the eBay validation detail from a CSV-formatted File Exchange result file", async () => {
+    const csv = [
+      "Action,Custom label (SKU),Category ID,Title,Condition ID",
+      "Draft,SSS-1-2,139973,Bronkie the Bronchiasaurus Cartridge,6000",
+      '#Error,,,,,,25007,"Category 139973 does not accept condition 6000 for this item."',
+    ].join("\n");
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(csv, {
+      status: 200,
+      headers: { "content-disposition": "attachment; filename=task-123-result.csv" },
+    }));
+
+    try {
+      await expect(getNativeSellerHubDraftFailureDetail("access-token", "task-123")).resolves.toBe(
+        "eBay error 25007: Category 139973 does not accept condition 6000 for this item.",
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("falls back to a raw excerpt when the result file matches neither known format", async () => {
+    const body = "Some unrecognized eBay result file content describing what went wrong with this task.";
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(body, {
+      status: 200,
+      headers: { "content-disposition": "attachment; filename=task-123-result.txt" },
+    }));
+
+    try {
+      await expect(getNativeSellerHubDraftFailureDetail("access-token", "task-123")).resolves.toContain(
+        "Some unrecognized eBay result file content",
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

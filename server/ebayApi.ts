@@ -648,7 +648,7 @@ function decodeXmlText(value: string) {
     .trim();
 }
 
-function extractFeedFailureDetail(resultFile: string) {
+function extractXmlFailureDetail(resultFile: string) {
   const valueFor = (tag: "LongMessage" | "ShortMessage" | "ErrorCode") =>
     resultFile.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"))?.[1];
   const message = decodeXmlText(valueFor("LongMessage") || valueFor("ShortMessage") || "");
@@ -656,6 +656,70 @@ function extractFeedFailureDetail(resultFile: string) {
   if (!message) return undefined;
   const safeMessage = message.slice(0, 360);
   return code ? `eBay error ${code}: ${safeMessage}` : safeMessage;
+}
+
+// Splits one CSV line into fields, honoring double-quoted fields that may contain commas.
+function splitCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        current += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      fields.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current);
+  return fields.map(field => field.trim());
+}
+
+// eBay's File Exchange (FX) result file is a CSV echoing the upload, with
+// error/warning rows marked in the first column and eBay's numeric error code
+// plus description carried in later columns. The exact column layout isn't
+// guaranteed across accounts/report versions, so this takes the longest
+// plausible free-text field on a marked row as the message, and any adjacent
+// short numeric field as the code, rather than assuming fixed positions.
+function extractCsvFailureDetail(resultFile: string) {
+  const errorLine = resultFile
+    .split(/\r?\n/)
+    .find(line => /^#?(error|warning)\b/i.test(line.trim()));
+  if (!errorLine) return undefined;
+
+  const fields = splitCsvLine(errorLine).filter(Boolean);
+  const message = fields
+    .filter(field => !/^#?(error|warning)$/i.test(field))
+    .sort((a, b) => b.length - a.length)[0];
+  if (!message || message.length < 8) return undefined;
+
+  const code = fields.find(field => /^\d{4,6}$/.test(field));
+  const safeMessage = message.slice(0, 360);
+  return code ? `eBay error ${code}: ${safeMessage}` : safeMessage;
+}
+
+// Last resort when neither structured parser recognizes the file: show a
+// short, cleaned excerpt of eBay's own result content rather than a fully
+// generic message. This is the seller's own listing/error data, not a secret.
+function extractRawExcerpt(resultFile: string) {
+  const excerpt = resultFile.replace(/\s+/g, " ").trim().slice(0, 280);
+  return excerpt.length > 20 ? `eBay result file excerpt: ${excerpt}` : undefined;
+}
+
+function extractFeedFailureDetail(resultFile: string) {
+  return extractXmlFailureDetail(resultFile) ?? extractCsvFailureDetail(resultFile) ?? extractRawExcerpt(resultFile);
 }
 
 /**
