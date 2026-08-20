@@ -92,6 +92,12 @@ vi.mock("@/lib/trpc", () => ({
       status: { useQuery: () => ({ data: { connection: { setupComplete: true } }, isLoading: false }) },
       createDraft: { useMutation: () => ({ mutate: mocks.createDraftMutate, mutateAsync: mocks.createDraftMutate, isPending: false }) },
       publishDraft: { useMutation: () => ({ mutate: mocks.publishDraftMutate, mutateAsync: mocks.publishDraftMutate, isPending: false }) },
+      conditionOptions: {
+        useQuery: () => ({
+          data: { options: [{ id: "3000", label: "Used" }, { id: "1000", label: "New" }], defaultConditionId: "3000" },
+          isLoading: false,
+        }),
+      },
     },
   },
 }));

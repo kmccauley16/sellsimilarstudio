@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
@@ -88,6 +89,24 @@ export default function Review() {
     setInitializedId(listing.data.id);
     setDescriptionProposal(null);
   }, [listing.data, initializedId]);
+
+  const conditionOptionsQuery = trpc.ebay.conditionOptions.useQuery(
+    { categoryId: form.categoryId.trim() || undefined },
+    { enabled: initializedId !== null },
+  );
+  const conditionOptions = useMemo(() => {
+    const options = conditionOptionsQuery.data?.options ?? [];
+    if (!form.conditionId.trim() || options.some(option => option.id === form.conditionId)) return options;
+    // Keep whatever condition is already saved selectable even if it fell outside this category's list.
+    return [...options, { id: form.conditionId, label: form.conditionName || `Condition ${form.conditionId}` }];
+  }, [conditionOptionsQuery.data, form.conditionId, form.conditionName]);
+
+  useEffect(() => {
+    if (form.conditionId.trim() || !conditionOptionsQuery.data?.defaultConditionId) return;
+    const defaultOption = conditionOptionsQuery.data.options.find(option => option.id === conditionOptionsQuery.data!.defaultConditionId);
+    if (!defaultOption) return;
+    setForm(current => (current.conditionId.trim() ? current : { ...current, conditionId: defaultOption.id, conditionName: defaultOption.label }));
+  }, [conditionOptionsQuery.data, form.conditionId]);
 
   const utils = trpc.useUtils();
   const saveReview = trpc.listing.update.useMutation({
@@ -494,11 +513,27 @@ export default function Review() {
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                   <Field label="Price" prefix="$"><Input aria-label="Price" inputMode="decimal" value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} placeholder="0.00" className="h-11 rounded-xl border-[#dcd9d2] pl-7 shadow-none" /></Field>
                   <Field label="Quantity"><Input aria-label="Quantity" type="number" min={1} max={999} value={form.quantity} onChange={event => setForm({ ...form, quantity: Math.max(1, Number(event.target.value) || 1) })} className="h-11 rounded-xl border-[#dcd9d2] shadow-none" /></Field>
-                  <Field label="Condition ID"><Input aria-label="Condition ID" value={form.conditionId} onChange={event => setForm({ ...form, conditionId: event.target.value })} placeholder="e.g. 3000" className="h-11 rounded-xl border-[#dcd9d2] shadow-none" /></Field>
+                  <Field label="Condition">
+                    <Select
+                      value={form.conditionId}
+                      onValueChange={value => {
+                        const option = conditionOptions.find(item => item.id === value);
+                        setForm({ ...form, conditionId: value, conditionName: option?.label ?? form.conditionName });
+                      }}
+                    >
+                      <SelectTrigger aria-label="Condition" className="h-11 rounded-xl border-[#dcd9d2] shadow-none">
+                        <SelectValue placeholder={conditionOptionsQuery.isLoading ? "Loading…" : "Choose condition"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {conditionOptions.map(option => (
+                          <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
                   <Field label="Category ID"><Input aria-label="Category ID" value={form.categoryId} onChange={event => setForm({ ...form, categoryId: event.target.value })} placeholder="Required" className="h-11 rounded-xl border-[#dcd9d2] shadow-none" /></Field>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <Field label="Condition name"><Input aria-label="Condition name" value={form.conditionName} onChange={event => setForm({ ...form, conditionName: event.target.value })} placeholder="Pre-owned" className="h-11 rounded-xl border-[#dcd9d2] shadow-none" /></Field>
                   <Field label="Category name"><Input aria-label="Category name" value={form.categoryName} onChange={event => setForm({ ...form, categoryName: event.target.value })} placeholder="Optional reference" className="h-11 rounded-xl border-[#dcd9d2] shadow-none" /></Field>
                 </div>
                 <Field label="Description" note="Write only what accurately describes your item">

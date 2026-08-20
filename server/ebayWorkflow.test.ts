@@ -164,7 +164,8 @@ describe("US unpublished offer mapping", () => {
 
   it("maps common eBay condition IDs", () => {
     expect(mapInventoryCondition("1000", "New")).toBe("NEW");
-    expect(mapInventoryCondition("3000", "Pre-owned")).toBe("USED_GOOD");
+    expect(mapInventoryCondition("3000", "Pre-owned")).toBe("USED_EXCELLENT");
+    expect(mapInventoryCondition("5000", "Pre-owned")).toBe("USED_GOOD");
   });
 
   it("builds inventory and offer payloads without a publish operation", () => {

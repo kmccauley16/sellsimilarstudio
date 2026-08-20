@@ -6,10 +6,12 @@ import {
   buildDraftPayloads,
   createOrReuseWarehouseLocation,
   createUnpublishedOffer,
+  defaultConditionOptions,
   EBAY_MARKETPLACE_ID,
   ebayListingUrl,
   encryptToken,
   exchangeAuthorizationCode,
+  fetchConditionOptions,
   fetchSellerIdentity,
   fetchSellerSetup,
   getNativeSellerHubDraftFailureDetail,
@@ -309,6 +311,23 @@ export const ebayRouter = router({
       if (!valid) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose valid policies and a location from your eBay US account." });
       const connection = await db.updateEbayConnectionSettings(ctx.user.id, input);
       return { connection: connectionSummary(connection) };
+    }),
+
+  conditionOptions: protectedProcedure
+    .input(z.object({ categoryId: z.string().trim().max(64).optional() }))
+    .query(async ({ ctx, input }) => {
+      const connection = await db.getEbayConnection(ctx.user.id);
+      if (!connection) return defaultConditionOptions();
+      try {
+        const token = await getUsableAccessToken(connection, (encrypted, expiresAt) =>
+          db.updateEbayAccessToken(ctx.user.id, encrypted, expiresAt),
+        );
+        return await fetchConditionOptions(token, input.categoryId);
+      } catch (error) {
+        // A seller must always see a usable condition list even when the live eBay lookup fails.
+        logRedactedEbayFailure("fetch item condition options", error, { categoryId: input.categoryId });
+        return defaultConditionOptions();
+      }
     }),
 
   disconnect: protectedProcedure.mutation(async ({ ctx }) => {

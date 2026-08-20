@@ -354,21 +354,93 @@ export async function fetchSellerSetup(accessToken: string) {
   };
 }
 
+// eBay's numeric condition IDs (returned by the Metadata API's getItemConditionPolicies)
+// and the Inventory API's text-based ConditionEnum values are two distinct spaces; this
+// is the fixed, documented pairing between them (confirmed against eBay's published
+// Condition ID and ConditionEnum references). Which of these IDs a given category actually
+// accepts still varies by category — see fetchConditionOptions below for that per-category lookup.
+const CONDITION_CATALOG = [
+  { id: "1000", label: "New", enumValue: "NEW" },
+  { id: "1500", label: "New other (see details)", enumValue: "NEW_OTHER" },
+  { id: "1750", label: "New with defects", enumValue: "NEW_WITH_DEFECTS" },
+  { id: "2000", label: "Certified - Refurbished", enumValue: "CERTIFIED_REFURBISHED" },
+  { id: "2010", label: "Excellent - Refurbished", enumValue: "EXCELLENT_REFURBISHED" },
+  { id: "2020", label: "Very Good - Refurbished", enumValue: "VERY_GOOD_REFURBISHED" },
+  { id: "2030", label: "Good - Refurbished", enumValue: "GOOD_REFURBISHED" },
+  { id: "2500", label: "Seller refurbished", enumValue: "SELLER_REFURBISHED" },
+  { id: "2750", label: "Like New", enumValue: "LIKE_NEW" },
+  { id: "2990", label: "Pre-owned - Excellent", enumValue: "PRE_OWNED_EXCELLENT" },
+  { id: "3000", label: "Used", enumValue: "USED_EXCELLENT" },
+  { id: "3010", label: "Pre-owned - Fair", enumValue: "PRE_OWNED_FAIR" },
+  { id: "4000", label: "Used - Very Good", enumValue: "USED_VERY_GOOD" },
+  { id: "5000", label: "Used - Good", enumValue: "USED_GOOD" },
+  { id: "6000", label: "Used - Acceptable", enumValue: "USED_ACCEPTABLE" },
+  { id: "7000", label: "For parts or not working", enumValue: "FOR_PARTS_OR_NOT_WORKING" },
+] as const;
+
+export type ConditionOption = { id: string; label: string };
+
 export function mapInventoryCondition(conditionId?: string | null, conditionName?: string | null) {
-  const id = Number(conditionId);
-  if (id === 1000) return "NEW";
-  if (id === 1500) return "NEW_OTHER";
-  if (id === 1750) return "NEW_WITH_DEFECTS";
-  if (id === 2000) return "CERTIFIED_REFURBISHED";
-  if (id === 2010 || id === 2020) return "EXCELLENT_REFURBISHED";
-  if (id === 2030) return "VERY_GOOD_REFURBISHED";
-  if (id === 2500) return "SELLER_REFURBISHED";
-  if ([2750, 3000, 4000, 5000, 6000, 7000].includes(id)) return "USED_GOOD";
+  const catalogEntry = CONDITION_CATALOG.find(entry => entry.id === String(conditionId ?? "").trim());
+  if (catalogEntry) return catalogEntry.enumValue;
   const normalized = conditionName?.toLowerCase() ?? "";
   if (normalized.includes("new")) return "NEW";
   if (normalized.includes("refurbished")) return "SELLER_REFURBISHED";
-  if (normalized.includes("used") || normalized.includes("pre-owned")) return "USED_GOOD";
+  if (normalized.includes("used") || normalized.includes("pre-owned")) return "USED_EXCELLENT";
   throw new Error("Choose a supported item condition before creating the draft");
+}
+
+// Preference order when auto-selecting a condition for the seller: most of this app's
+// inventory is used, so "Used" (3000) wins whenever the category supports it.
+const CONDITION_DEFAULT_PREFERENCE = ["3000", "5000", "1000", "4000", "6000", "2750"];
+
+function pickDefaultConditionId(options: ConditionOption[]) {
+  for (const id of CONDITION_DEFAULT_PREFERENCE) {
+    if (options.some(option => option.id === id)) return id;
+  }
+  return options[0]?.id ?? null;
+}
+
+export function defaultConditionOptions(): { options: ConditionOption[]; defaultConditionId: string | null } {
+  const options = CONDITION_CATALOG.map(entry => ({ id: entry.id, label: entry.label }));
+  return { options, defaultConditionId: pickDefaultConditionId(options) };
+}
+
+/**
+ * Looks up which item conditions eBay actually accepts for a category via the Metadata API,
+ * so the seller only ever sees (and the app only ever sends) a condition eBay will accept for
+ * that category, instead of a manually typed numeric ID that may be invalid for it.
+ */
+export async function fetchConditionOptions(accessToken: string, categoryId?: string | null) {
+  const trimmedCategoryId = categoryId?.trim();
+  if (!trimmedCategoryId) return defaultConditionOptions();
+
+  const config = getConfig();
+  const base = ebayEndpoints(config.environment).api;
+  try {
+    const result = await ebayRequest<{
+      itemConditionPolicies?: Array<{
+        categoryId?: string;
+        conditionValues?: Array<{ conditionId?: string; conditionDescription?: string }>;
+      }>;
+    }>(
+      `${base}/sell/metadata/v1/marketplace/${EBAY_MARKETPLACE_ID}/item_condition_policies?filter=categoryIds:${encodeURIComponent(trimmedCategoryId)}`,
+      { headers: apiHeaders(accessToken) },
+    );
+    const policy = result.itemConditionPolicies?.find(item => item.categoryId === trimmedCategoryId) ?? result.itemConditionPolicies?.[0];
+    const options = (policy?.conditionValues ?? [])
+      .map((value): ConditionOption | null => {
+        const catalogEntry = CONDITION_CATALOG.find(entry => entry.id === value.conditionId);
+        if (!catalogEntry) return null;
+        return { id: catalogEntry.id, label: value.conditionDescription?.trim() || catalogEntry.label };
+      })
+      .filter((option): option is ConditionOption => option !== null);
+    if (!options.length) return defaultConditionOptions();
+    return { options, defaultConditionId: pickDefaultConditionId(options) };
+  } catch {
+    // A seller must always see a usable condition list, even when eBay's metadata lookup fails.
+    return defaultConditionOptions();
+  }
 }
 
 function parseJson<T>(value: string, fallback: T): T {
