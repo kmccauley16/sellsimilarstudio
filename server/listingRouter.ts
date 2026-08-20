@@ -112,6 +112,18 @@ async function decodeImageUpload(base64: string) {
   }
 }
 
+// Surfaces the real storage-provider error inline (bucket/region/credential misconfiguration,
+// R2 compatibility errors, etc.) instead of a generic message, so a fix doesn't require pulling
+// server logs. AWS SDK error text does not embed secret key values, only a code + description;
+// this still redacts anything long enough to look like a token, out of caution.
+function describeStorageError(error: unknown): string {
+  const name = error && typeof error === "object" && "name" in error ? String((error as { name: unknown }).name) : "";
+  const message = error instanceof Error ? error.message : String(error);
+  const combined = [name, message].filter(Boolean).join(": ");
+  const redacted = combined.replace(/[A-Za-z0-9+/_-]{32,}/g, "[redacted]");
+  return redacted.slice(0, 300) || "The photo storage provider did not explain the failure.";
+}
+
 async function requireListing(userId: number, id: number) {
   const listing = await db.getListingImport(userId, id);
   if (!listing) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
@@ -200,7 +212,7 @@ export const listingRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         console.error("[uploadOwnedPhoto] storage upload failed", error);
-        throw new TRPCError({ code: "BAD_GATEWAY", message: "The photo could not be uploaded. Check the photo storage configuration and try again." });
+        throw new TRPCError({ code: "BAD_GATEWAY", message: `The photo could not be uploaded. ${describeStorageError(error)}` });
       }
     }),
 
