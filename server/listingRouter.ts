@@ -316,4 +316,12 @@ export const listingRouter = router({
       sellerHubUrl: draft?.sellerHubUrl ?? null,
     }));
   }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const deleted = await db.deleteListingImport(ctx.user.id, input.id);
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
+      return { success: true as const };
+    }),
 });

@@ -1,14 +1,34 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
-import { ArrowUpRight, CircleAlert, Clock3, FilePlus2, History as HistoryIcon, RotateCcw } from "lucide-react";
+import { ArrowUpRight, CircleAlert, Clock3, FilePlus2, History as HistoryIcon, RotateCcw, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 export default function History() {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const history = trpc.listing.history.useQuery();
+  const deleteListing = trpc.listing.delete.useMutation({
+    onSuccess: async () => {
+      await utils.listing.history.invalidate();
+      toast.success("Listing removed from your draft history.");
+    },
+    onError: error => toast.error(error.message),
+  });
 
   return (
     <DashboardLayout>
@@ -42,12 +62,30 @@ export default function History() {
                   </div>
                   <p className="text-xs text-[#697681]">{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
                   <Status status={item.status} />
-                  <div className="flex justify-start md:justify-end">
+                  <div className="flex items-center justify-start gap-2 md:justify-end">
                     {item.status === "published" && item.sellerHubUrl ? (
                       <a href={item.sellerHubUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d8d5ce] bg-white px-3 text-xs font-semibold text-[#3e4b57] hover:border-[#bfc5da]">View listing <ArrowUpRight className="size-3" /></a>
                     ) : (
                       <Button variant="outline" onClick={() => setLocation(`/review/${item.id}`)} className="h-9 rounded-lg border-[#d8d5ce] bg-white text-xs">{item.status === "failed" ? "Review issue" : item.status === "draft created" ? "Publish draft" : "Continue review"}</Button>
                     )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="icon" aria-label={`Delete ${item.title}`} className="h-9 w-9 shrink-0 rounded-lg border-[#d8d5ce] bg-white text-[#9a5148] hover:bg-[#f9ece9] hover:text-[#7e3f38]"><Trash2 className="size-3.5" /></Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes "{item.title}" and its draft from Sell Similar Studio only.
+                            {item.status === "published" ? " It does not remove or end the live eBay listing." : ""} This cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteListing.mutate({ id: item.id })} className="bg-[#9a5148] hover:bg-[#7e3f38]">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               ))}

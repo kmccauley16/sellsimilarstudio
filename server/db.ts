@@ -107,6 +107,15 @@ export async function getListingImport(userId: number, id: number) {
   return rows[0];
 }
 
+// The ebay_drafts row (if any) is removed automatically by the ON DELETE CASCADE constraint.
+export async function deleteListingImport(userId: number, id: number) {
+  const db = await requireDb();
+  const result = await db
+    .delete(listingImports)
+    .where(and(eq(listingImports.id, id), eq(listingImports.userId, userId)));
+  return result[0].affectedRows > 0;
+}
+
 export type ListingReviewUpdate = {
   title: string;
   description: string;
