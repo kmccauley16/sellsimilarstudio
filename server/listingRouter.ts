@@ -336,4 +336,19 @@ export const listingRouter = router({
       if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
       return { success: true as const };
     }),
+
+  deleteMany: protectedProcedure
+    .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      const deletedCount = await db.deleteListingImports(ctx.user.id, input.ids);
+      return { deletedCount };
+    }),
+
+  updateNotes: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), notes: z.string().max(10_000) }))
+    .mutation(async ({ ctx, input }) => {
+      const updated = await db.updateListingNotes(ctx.user.id, input.id, input.notes.trim() || null);
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
+      return serializeListing(updated);
+    }),
 });

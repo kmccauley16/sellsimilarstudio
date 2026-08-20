@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   ebayConnections,
@@ -114,6 +114,23 @@ export async function deleteListingImport(userId: number, id: number) {
     .delete(listingImports)
     .where(and(eq(listingImports.id, id), eq(listingImports.userId, userId)));
   return result[0].affectedRows > 0;
+}
+
+export async function deleteListingImports(userId: number, ids: number[]) {
+  const db = await requireDb();
+  const result = await db
+    .delete(listingImports)
+    .where(and(inArray(listingImports.id, ids), eq(listingImports.userId, userId)));
+  return result[0].affectedRows;
+}
+
+export async function updateListingNotes(userId: number, id: number, notes: string | null) {
+  const db = await requireDb();
+  await db
+    .update(listingImports)
+    .set({ notes })
+    .where(and(eq(listingImports.id, id), eq(listingImports.userId, userId)));
+  return getListingImport(userId, id);
 }
 
 export type ListingReviewUpdate = {

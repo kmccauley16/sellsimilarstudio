@@ -64,6 +64,13 @@
       "when": 1787165723036,
       "tag": "0008_chilly_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1787191729799,
+      "tag": "0009_next_the_watchers",
+      "breakpoints": true
     }
   ]
 }

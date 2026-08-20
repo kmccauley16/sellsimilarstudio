@@ -74,6 +74,7 @@ vi.mock("@/lib/trpc", () => ({
           isPending: false,
         }),
       },
+      updateNotes: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       proposeDescription: {
         useMutation: (options: typeof mocks.proposalOptions) => {
           mocks.proposalOptions = options;

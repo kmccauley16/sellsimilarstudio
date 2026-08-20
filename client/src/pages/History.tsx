@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import { ArrowUpRight, CircleAlert, Clock3, FilePlus2, History as HistoryIcon, RotateCcw, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -22,6 +23,8 @@ export default function History() {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const history = trpc.listing.history.useQuery();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   const deleteListing = trpc.listing.delete.useMutation({
     onSuccess: async () => {
       await utils.listing.history.invalidate();
@@ -29,6 +32,25 @@ export default function History() {
     },
     onError: error => toast.error(error.message),
   });
+
+  const deleteManyListings = trpc.listing.deleteMany.useMutation({
+    onSuccess: async data => {
+      await utils.listing.history.invalidate();
+      setSelectedIds([]);
+      toast.success(`Removed ${data.deletedCount} listing${data.deletedCount === 1 ? "" : "s"} from your draft history.`);
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const allIds = history.data?.map(item => item.id) ?? [];
+  const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
+
+  const toggleSelected = (id: number) => {
+    setSelectedIds(current => current.includes(id) ? current.filter(existing => existing !== id) : [...current, id]);
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : allIds);
+  };
 
   return (
     <DashboardLayout>
@@ -39,7 +61,30 @@ export default function History() {
             <h1 className="font-display mt-3 text-4xl tracking-[-0.04em] text-[#17212b]">Draft history.</h1>
             <p className="mt-3 text-sm text-[#596674]">Every imported listing and whether its eBay draft has been published yet.</p>
           </div>
-          <Button onClick={() => setLocation("/")} className="h-11 rounded-xl bg-[#3156d8] px-5 hover:bg-[#294cc4]"><FilePlus2 className="mr-2 size-4" /> New draft</Button>
+          <div className="flex gap-3">
+            {selectedIds.length > 0 ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={deleteManyListings.isPending} className="h-11 rounded-xl border-[#e3c6c1] bg-white px-5 text-[#9a5148] hover:bg-[#f9ece9]">
+                    <Trash2 className="mr-2 size-4" /> Delete {selectedIds.length} selected
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete {selectedIds.length} listing{selectedIds.length === 1 ? "" : "s"}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the selected listings and their drafts from Sell Similar Studio only. It does not remove or end any live eBay listings. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteManyListings.mutate({ ids: selectedIds })} className="bg-[#9a5148] hover:bg-[#7e3f38]">Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+            <Button onClick={() => setLocation("/")} className="h-11 rounded-xl bg-[#3156d8] px-5 hover:bg-[#294cc4]"><FilePlus2 className="mr-2 size-4" /> New draft</Button>
+          </div>
         </div>
 
         <Card className="mt-8 overflow-hidden rounded-[26px] border-[#e1ded7] bg-white shadow-[0_8px_30px_rgba(35,43,50,.035)]">
@@ -49,11 +94,13 @@ export default function History() {
             <div className="p-12 text-center"><CircleAlert className="mx-auto size-8 text-[#b95c4e]" /><p className="mt-4 text-sm font-semibold">History could not be loaded.</p><Button variant="outline" onClick={() => history.refetch()} className="mt-5 rounded-xl"><RotateCcw className="mr-2 size-4" /> Try again</Button></div>
           ) : history.data?.length ? (
             <div className="divide-y divide-[#ebe8e2]">
-              <div className="hidden grid-cols-[1.5fr_.55fr_.5fr_.55fr] gap-5 bg-[#f5f3ef] px-6 py-3 text-[10px] font-semibold tracking-[0.12em] text-[#596674] uppercase md:grid">
+              <div className="hidden grid-cols-[auto_1.5fr_.55fr_.5fr_.55fr] items-center gap-5 bg-[#f5f3ef] px-6 py-3 text-[10px] font-semibold tracking-[0.12em] text-[#596674] uppercase md:grid">
+                <input type="checkbox" aria-label="Select all listings" checked={allSelected} onChange={toggleSelectAll} className="size-4 accent-[#3156d8]" />
                 <span>Listing</span><span>Imported</span><span>Status</span><span className="text-right">Action</span>
               </div>
               {history.data.map(item => (
-                <div key={item.id} className="grid gap-5 px-5 py-5 transition-colors hover:bg-[#faf9f7] md:grid-cols-[1.5fr_.55fr_.5fr_.55fr] md:items-center md:px-6">
+                <div key={item.id} className="grid grid-cols-[auto_1fr] items-start gap-4 px-5 py-5 transition-colors hover:bg-[#faf9f7] md:grid-cols-[auto_1.5fr_.55fr_.5fr_.55fr] md:items-center md:px-6">
+                  <input type="checkbox" aria-label={`Select ${item.title}`} checked={selectedIds.includes(item.id)} onChange={() => toggleSelected(item.id)} className="mt-1 size-4 shrink-0 accent-[#3156d8] md:mt-0" />
                   <div className="flex min-w-0 items-center gap-4">
                     <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-[#efede8]">
                       {item.imageUrls[0] ? <img src={item.imageUrls[0]} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center"><HistoryIcon className="size-4 text-[#9ba3ab]" /></div>}

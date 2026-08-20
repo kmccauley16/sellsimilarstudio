@@ -68,6 +68,7 @@ export default function Review() {
   const [specificTargetIndex, setSpecificTargetIndex] = useState<number | null>(null);
   const [initializedId, setInitializedId] = useState<number | null>(null);
   const [descriptionProposal, setDescriptionProposal] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (!listing.data || initializedId === listing.data.id) return;
@@ -83,6 +84,7 @@ export default function Review() {
       categoryName: listing.data.categoryName ?? "",
       quantity: listing.data.quantity,
     });
+    setNotes(listing.data.notes ?? "");
     setInitializedId(listing.data.id);
     setDescriptionProposal(null);
   }, [listing.data, initializedId]);
@@ -101,6 +103,14 @@ export default function Review() {
     utils.listing.get.setData({ id }, current => current ? { ...current, ...data } : current);
     void utils.listing.history.invalidate();
   };
+
+  const saveNotes = trpc.listing.updateNotes.useMutation({
+    onSuccess: data => {
+      updateListingCache(data);
+      toast.success("Notes saved.");
+    },
+    onError: error => toast.error(error.message),
+  });
 
   const uploadOwnedPhoto = trpc.listing.uploadOwnedPhoto.useMutation({
     onSuccess: data => {
@@ -309,6 +319,9 @@ export default function Review() {
       JSON.stringify(normalizeKeywordPhrases(form.keywords, MAX_REVIEW_KEYWORDS)) !== JSON.stringify(listing.data.keywords)
     );
   }, [form, listing.data]);
+
+  const hasUnsavedNotes = notes !== (listing.data?.notes ?? "");
+  const saveNotesNow = () => saveNotes.mutate({ id, notes });
 
   const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -620,6 +633,17 @@ export default function Review() {
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => setForm(current => ({ ...current, itemSpecifics: [...current.itemSpecifics, { name: "", value: "" }] }))} className="mt-2 rounded-xl border-dashed border-[#cfcac1] bg-transparent text-[#586775]"><Plus className="mr-2 size-4" /> Add item specific</Button>
+              </div>
+            </Section>
+
+            <Section eyebrow="Private" title="Notes">
+              <p className="text-xs leading-5 text-[#697581]">Visible only to whoever is signed into this account (e.g. a VA sharing your login). Never sent to eBay.</p>
+              <Textarea aria-label="Notes" value={notes} onChange={event => setNotes(event.target.value)} placeholder="e.g. Ship from the garage shelf, buyer wants signature confirmation…" rows={4} className="mt-3 rounded-xl border-[#dcd9d2] bg-[#fcfcfb] shadow-none" />
+              <div className="mt-3 flex justify-end">
+                <Button type="button" variant="outline" onClick={saveNotesNow} disabled={!hasUnsavedNotes || saveNotes.isPending} className="h-9 rounded-lg border-[#d8d5ce] bg-white text-xs">
+                  {saveNotes.isPending ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : <Save className="mr-2 size-3.5" />}
+                  {saveNotes.isPending ? "Saving…" : "Save notes"}
+                </Button>
               </div>
             </Section>
           </div>

@@ -83,6 +83,8 @@ export const listingImports = mysqlTable(
       .default("review")
       .notNull(),
     errorMessage: text("errorMessage"),
+    // Private seller notes (e.g. instructions for a VA); never sent to eBay.
+    notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

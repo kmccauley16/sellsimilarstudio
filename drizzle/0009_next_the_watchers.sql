@@ -1,0 +1,1 @@
+ALTER TABLE `listing_imports` ADD `notes` text;
