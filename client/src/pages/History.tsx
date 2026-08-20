@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
-import { ArrowUpRight, CircleAlert, Clock3, FilePlus2, History as HistoryIcon, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowUpRight, CircleAlert, Clock3, FilePlus2, History as HistoryIcon, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -42,8 +42,24 @@ export default function History() {
     onError: error => toast.error(error.message),
   });
 
+  const publishManyListings = trpc.ebay.publishMany.useMutation({
+    onSuccess: async data => {
+      await utils.listing.history.invalidate();
+      setSelectedIds([]);
+      const succeeded = data.results.filter(result => result.success).length;
+      const failed = data.results.filter(result => !result.success);
+      if (failed.length === 0) {
+        toast.success(`Published ${succeeded} listing${succeeded === 1 ? "" : "s"} to eBay.`);
+      } else {
+        toast.error(`Published ${succeeded} of ${data.results.length}. ${failed.length} failed: ${failed[0].message}${failed.length > 1 ? ` (+${failed.length - 1} more)` : ""}`);
+      }
+    },
+    onError: error => toast.error(error.message),
+  });
+
   const allIds = history.data?.map(item => item.id) ?? [];
   const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
+  const publishableSelectedIds = selectedIds.filter(id => history.data?.find(item => item.id === id)?.status === "draft created");
 
   const toggleSelected = (id: number) => {
     setSelectedIds(current => current.includes(id) ? current.filter(existing => existing !== id) : [...current, id]);
@@ -62,6 +78,27 @@ export default function History() {
             <p className="mt-3 text-sm text-[#596674]">Every imported listing and whether its eBay draft has been published yet.</p>
           </div>
           <div className="flex gap-3">
+            {publishableSelectedIds.length > 0 ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={publishManyListings.isPending} className="h-11 rounded-xl border-[#cfd8fb] bg-white px-5 text-[#3156d8] hover:bg-[#eef1ff]">
+                    <Upload className="mr-2 size-4" /> Publish {publishableSelectedIds.length} selected
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Publish {publishableSelectedIds.length} listing{publishableSelectedIds.length === 1 ? "" : "s"} to eBay?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Each of these goes live on eBay immediately. This cannot be undone from here — you'd need to end the listing on eBay itself.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => publishManyListings.mutate({ listingImportIds: publishableSelectedIds })} className="bg-[#3156d8] hover:bg-[#294cc4]">Publish</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
             {selectedIds.length > 0 ? (
               <AlertDialog>
                 <AlertDialogTrigger asChild>

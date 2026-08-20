@@ -148,6 +148,31 @@ async function refreshNativeDraftTask(userId: number, listingImportId: number, t
   };
 }
 
+async function publishOneDraft(userId: number, listingImportId: number): Promise<
+  | { success: true; listingId: string; url: string }
+  | { success: false; code: "NOT_FOUND" | "BAD_GATEWAY"; message: string }
+> {
+  const draft = await db.getEbayDraftForListing(userId, listingImportId);
+  if (!draft || draft.workflow !== "inventory_offer" || !draft.offerId) {
+    return { success: false, code: "NOT_FOUND", message: "Create the eBay draft before publishing it." };
+  }
+  try {
+    const { token } = await usableToken(userId);
+    const { listingId } = await publishOffer(token, draft.offerId);
+    const url = ebayListingUrl(listingId);
+    await db.markOfferPublished(userId, listingImportId, { listingId, url });
+    await db.setListingStatus(userId, listingImportId, "published");
+    return { success: true, listingId, url };
+  } catch (error) {
+    logRedactedEbayFailure("publish eBay offer", error, { listingImportId });
+    return {
+      success: false,
+      code: "BAD_GATEWAY",
+      message: error instanceof Error ? error.message : "eBay could not publish this listing. Review the listing details and try again.",
+    };
+  }
+}
+
 export const ebayRouter = router({
   status: protectedProcedure.query(async ({ ctx }) => ({
     configured: isEbayConfigured(),
@@ -360,24 +385,19 @@ export const ebayRouter = router({
   publishDraft: protectedProcedure
     .input(z.object({ listingImportId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const draft = await db.getEbayDraftForListing(ctx.user.id, input.listingImportId);
-      if (!draft || draft.workflow !== "inventory_offer" || !draft.offerId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Create the eBay draft before publishing it." });
+      const result = await publishOneDraft(ctx.user.id, input.listingImportId);
+      if (!result.success) throw new TRPCError({ code: result.code, message: result.message });
+      return { listingId: result.listingId, url: result.url };
+    }),
+
+  publishMany: protectedProcedure
+    .input(z.object({ listingImportIds: z.array(z.number().int().positive()).min(1).max(50) }))
+    .mutation(async ({ ctx, input }) => {
+      const results = [];
+      for (const listingImportId of input.listingImportIds) {
+        results.push({ listingImportId, ...await publishOneDraft(ctx.user.id, listingImportId) });
       }
-      try {
-        const { token } = await usableToken(ctx.user.id);
-        const { listingId } = await publishOffer(token, draft.offerId);
-        const url = ebayListingUrl(listingId);
-        await db.markOfferPublished(ctx.user.id, input.listingImportId, { listingId, url });
-        await db.setListingStatus(ctx.user.id, input.listingImportId, "published");
-        return { listingId, url };
-      } catch (error) {
-        logRedactedEbayFailure("publish eBay offer", error, { listingImportId: input.listingImportId });
-        throw new TRPCError({
-          code: "BAD_GATEWAY",
-          message: error instanceof Error ? error.message : "eBay could not publish this listing. Review the listing details and try again.",
-        });
-      }
+      return { results };
     }),
 
   refreshDraftStatus: protectedProcedure

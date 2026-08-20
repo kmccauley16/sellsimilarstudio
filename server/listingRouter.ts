@@ -233,6 +233,18 @@ export const listingRouter = router({
       return serializeListing(updated);
     }),
 
+  reorderOwnedPhotos: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), urls: z.array(z.string().min(1).max(1024)).max(MAX_OWNED_PHOTOS) }))
+    .mutation(async ({ ctx, input }) => {
+      const listing = await requireListing(ctx.user.id, input.id);
+      const currentUrls = ownedPhotoUrls(listing.ownedImageUrls);
+      const sameSet = input.urls.length === currentUrls.length && [...input.urls].sort().every((url, index) => url === [...currentUrls].sort()[index]);
+      if (!sameSet) throw new TRPCError({ code: "BAD_REQUEST", message: "That photo order does not match this listing's current photos." });
+      const updated = await db.updateOwnedImageUrls(ctx.user.id, listing.id, input.urls);
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Listing review not found." });
+      return serializeListing(updated);
+    }),
+
   attestPhotoRights: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {

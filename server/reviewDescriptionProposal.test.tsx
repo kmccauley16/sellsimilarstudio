@@ -83,6 +83,7 @@ vi.mock("@/lib/trpc", () => ({
       },
       uploadOwnedPhoto: { useMutation: () => ({ mutate: mocks.uploadOwnedPhotoMutate, isPending: false }) },
       removeOwnedPhoto: { useMutation: () => ({ mutate: mocks.removeOwnedPhotoMutate, isPending: false }) },
+      reorderOwnedPhotos: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       attestPhotoRights: { useMutation: () => ({ mutate: mocks.attestPhotoRightsMutate, isPending: false }) },
       attestItemAccuracy: { useMutation: () => ({ mutate: mocks.attestItemAccuracyMutate, isPending: false }) },
       enhancePhotoBackground: { useMutation: () => ({ mutate: mocks.enhancePhotoBackgroundMutate, isPending: false }) },

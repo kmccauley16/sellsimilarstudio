@@ -18,7 +18,7 @@ import {
   normalizeKeywordPhrase,
   normalizeKeywordPhrases,
 } from "@shared/keywords";
-import { ArrowLeft, Check, CheckCircle2, CircleAlert, ExternalLink, ImagePlus, Loader2, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ExternalLink, ImagePlus, Loader2, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
@@ -127,6 +127,19 @@ export default function Review() {
     },
     onError: error => toast.error(error.message),
   });
+
+  const reorderOwnedPhotos = trpc.listing.reorderOwnedPhotos.useMutation({
+    onSuccess: data => updateListingCache(data),
+    onError: error => toast.error(error.message),
+  });
+
+  const moveOwnedPhoto = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= ownedPhotoUrls.length) return;
+    const reordered = [...ownedPhotoUrls];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    reorderOwnedPhotos.mutate({ id, urls: reordered });
+  };
 
   const attestPhotoRights = trpc.listing.attestPhotoRights.useMutation({
     onSuccess: data => {
@@ -601,6 +614,11 @@ export default function Review() {
                   {ownedPhotoUrls.map((url, index) => (
                     <div key={url} className="group relative aspect-square overflow-hidden rounded-2xl border border-[#d9d5cd] bg-[#f0eee9]">
                       <img src={url} alt={`Seller-owned photo ${index + 1}`} className="h-full w-full object-cover" />
+                      {index === 0 ? <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">Cover photo</span> : null}
+                      <div className="absolute inset-x-2 top-2 flex justify-end gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                        <Button type="button" size="icon" variant="secondary" onClick={() => moveOwnedPhoto(index, -1)} disabled={index === 0 || reorderOwnedPhotos.isPending} aria-label={`Move photo ${index + 1} earlier`} className="size-7 shrink-0 rounded-lg bg-white/95 text-[#3e4b57] shadow-sm hover:bg-white"><ChevronLeft className="size-3.5" /></Button>
+                        <Button type="button" size="icon" variant="secondary" onClick={() => moveOwnedPhoto(index, 1)} disabled={index === ownedPhotoUrls.length - 1 || reorderOwnedPhotos.isPending} aria-label={`Move photo ${index + 1} later`} className="size-7 shrink-0 rounded-lg bg-white/95 text-[#3e4b57] shadow-sm hover:bg-white"><ChevronRight className="size-3.5" /></Button>
+                      </div>
                       <div className="absolute inset-x-2 bottom-2 flex gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                         <Button type="button" size="sm" variant="secondary" onClick={() => enhancePhotoBackground.mutate({ id, url })} disabled={!photoRightsConfirmed || enhancePhotoBackground.isPending} title={photoRightsConfirmed ? "Create a white-background version" : "Confirm photo rights before using the white-background tool"} className="h-8 flex-1 rounded-lg bg-white/95 px-2 text-[10px] text-[#3156d8] shadow-sm hover:bg-white">
                           {enhancePhotoBackground.isPending ? <Loader2 className="mr-1 size-3 animate-spin" /> : <Sparkles className="mr-1 size-3" />}
